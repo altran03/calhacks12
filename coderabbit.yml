@@ -1,0 +1,76 @@
+# Configuration for development teams
+language: "en-US"
+
+# Reviews configuration
+reviews:
+  profile: "chill"
+  high_level_summary: true
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches: ['.*']
+    ignore_title_keywords:
+      - "wip"
+      - "draft"
+  
+  # Tools configuration
+  tools:
+    # Linting tools
+    eslint:
+      enabled: true
+    ruff:
+      enabled: true
+    gitleaks:
+      enabled: true
+    hadolint:
+      enabled: true
+    # Abstract Syntax Tree (AST) based rules
+    ast-grep:
+      essential_rules: true
+      rule_dirs:
+        - "rules"
+  
+  pre_merge_checks:
+    docstrings:
+      mode: "error"
+      threshold: 85
+    title:
+      mode: "warning"
+      requirements: "Start with an imperative verb; keep under 50 characters."
+    description:
+      mode: "error"
+    issue_assessment:
+      mode: "warning"
+    custom_checks:
+      - name: "Undocumented Breaking Changes"
+        mode: "warning"
+        instructions: "Pass/fail criteria: All breaking changes to public APIs, CLI flags, environment variables, configuration keys, database schemas, or HTTP/GraphQL endpoints must be documented in the Breaking Change section of the PR description and in CHANGELOG.md. Exclude purely internal or private changes (e.g., code not exported from package entry points or explicitly marked as internal)."
+
+# Chat configuration
+chat:
+  auto_reply: true
+
+# Knowledge base configuration
+knowledge_base:
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "**/.cursorrules"
+      - "**/CODING_STANDARDS.md"
+
+  path_filters:
+    - "!**/*.lock"
+    - "!**/node_modules/**"
+    - "!**/venv/**"
+    - "!**/__pycache__/**"
+    - "!**/dist/**"
+    - "!**/build/**"
+    - "!**/data/**"
+  
+  path_instructions:
+    - path: "backend/**/*.py"
+      instructions: "Review Python code for SQL injection, hardcoded secrets, and empty except blocks"
+    - path: "frontend/**/*.tsx"
+      instructions: "Review TypeScript code for hardcoded secrets, empty catch blocks, and performance issues"
+    - path: "frontend/**/*.ts"
+      instructions: "Review TypeScript code for security and performance issues"

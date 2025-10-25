@@ -1,0 +1,74 @@
+# General
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Local development
+.local/
+local/
+
+# Project specific
+carelink/node_modules/
+carelink/.next/
+carelink/out/
+carelink/build/
+carelink/dist/
+carelink/backend/.env
+carelink/backend/venv/
+carelink/backend/__pycache__/
+carelink/backend/*.pyc
+carelink/backend/*.pyo
+carelink/backend/*.pyd
+
+# API keys and secrets
+*.key
+*.pem
+*.p12
+*.pfx
+secrets/
+.secrets/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# ngrok
+ngrok.yml
+ngrok.log
+
+# Vapi webhook logs
+vapi_logs/
+
+# Bright Data cache
+brightdata_cache/
+
+# Fetch.ai agent data
+agent_data/
+agent_logs/
+agent_wallets/
