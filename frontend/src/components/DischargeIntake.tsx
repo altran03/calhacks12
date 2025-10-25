@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   User, 
@@ -79,6 +79,7 @@ interface PatientInfo {
     dischargingFacility?: string;
     dischargingFacilityPhone?: string;
     facilityAddress?: string;
+    facilityFloor?: string;
     facilityCity?: string;
     facilityState?: string;
     facilityZip?: string;
@@ -86,24 +87,65 @@ interface PatientInfo {
     dateOfAdmission?: string;
     plannedDischargeDate?: string;
     dischargedTo?: string;
+    dischargeAddress?: string;
+    dischargeApartment?: string;
+    dischargeCity?: string;
+    dischargeState?: string;
+    dischargeZip?: string;
+    dischargePhone?: string;
+    travelOutsideNyc?: boolean;
+    travelDateDestination?: string;
   };
   followUp?: {
     appointmentDate?: string;
     physicianName?: string;
     physicianPhone?: string;
+    physicianCell?: string;
+    physicianAddress?: string;
+    physicianCity?: string;
+    physicianState?: string;
+    physicianZip?: string;
     barriersToAdherence?: string;
+    physicalDisability?: string;
     medicalCondition?: string;
+    substanceUse?: string;
+    mentalDisorder?: string;
+    otherBarriers?: string;
   };
   treatmentInfo?: {
     therapyInitiatedDate?: string;
-    medications?: string;
+    therapyInterrupted?: boolean;
+    interruptionReason?: string;
+    medications?: string | object;
     frequency?: string;
+    centralLineInserted?: boolean;
     daysOfMedicationSupplied?: string;
+    patientAgreedToDot?: boolean;
+    formFilledByName?: string;
+    formFilledDate?: string;
+    responsiblePhysicianName?: string;
+    physicianLicenseNumber?: string;
+    physicianPhone?: string;
+  };
+  labResults?: {
+    smear1_date?: string;
+    smear1_source?: string;
+    smear1_result?: string;
+    smear1_grade?: string;
+    smear2_date?: string;
+    smear2_source?: string;
+    smear2_result?: string;
+    smear2_grade?: string;
+    smear3_date?: string;
+    smear3_source?: string;
+    smear3_result?: string;
+    smear3_grade?: string;
   };
 }
 
 export default function DischargeIntake() {
   const [currentStep, setCurrentStep] = useState(0);
+  const [caseId, setCaseId] = useState<string>("");
   const [formData, setFormData] = useState<PatientInfo>({
     name: "",
     dateOfBirth: "",
@@ -175,9 +217,80 @@ export default function DischargeIntake() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submittedCaseId, setSubmittedCaseId] = useState<string>("");
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [dragActive, setDragActive] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "">("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Load form draft on component mount
+  useEffect(() => {
+    // Generate or retrieve case ID from localStorage
+    let storedCaseId = localStorage.getItem('current_case_id');
+    if (!storedCaseId) {
+      storedCaseId = `CASE_${Date.now()}`;
+      localStorage.setItem('current_case_id', storedCaseId);
+    }
+    setCaseId(storedCaseId);
+
+    // Check if this case has been submitted
+    const submittedStatus = localStorage.getItem(`case_submitted_${storedCaseId}`);
+    if (submittedStatus === 'true') {
+      setSubmitted(true);
+      setSubmittedCaseId(storedCaseId);
+    }
+
+    // Load form draft from backend
+    const loadDraft = async () => {
+      try {
+        const response = await fetch(`http://localhost:8000/api/form-draft/${storedCaseId}`);
+        const result = await response.json();
+        
+        if (result.status === "success" && result.form_data) {
+          console.log("✅ Loaded form draft:", result.form_data);
+          setFormData(result.form_data);
+          console.log("📝 Form restored from SQLite database");
+        } else {
+          console.log("📄 No existing draft found, starting fresh");
+        }
+      } catch (error) {
+        console.error("Error loading form draft:", error);
+      }
+    };
+
+    loadDraft();
+  }, []);
+
+  // Auto-save form data when it changes (debounced)
+  useEffect(() => {
+    if (!caseId) return;
+
+    setSaveStatus("saving");
+    const timeoutId = setTimeout(async () => {
+      try {
+        const formDataToSend = new FormData();
+        formDataToSend.append('case_id', caseId);
+        formDataToSend.append('form_data', JSON.stringify(formData));
+
+        const response = await fetch('http://localhost:8000/api/form-draft/save', {
+          method: 'POST',
+          body: formDataToSend,
+        });
+
+        const result = await response.json();
+        if (result.status === "success") {
+          console.log("💾 Form auto-saved to SQLite");
+          setSaveStatus("saved");
+          setTimeout(() => setSaveStatus(""), 2000);
+        }
+      } catch (error) {
+        console.error("Error auto-saving form:", error);
+        setSaveStatus("");
+      }
+    }, 2000); // Save 2 seconds after user stops typing
+
+    return () => clearTimeout(timeoutId);
+  }, [formData, caseId]);
 
   const steps = [
     { 
@@ -280,7 +393,7 @@ export default function DischargeIntake() {
       setIsSubmitting(true);
       
       const formDataToSend = new FormData();
-      formDataToSend.append("case_id", `CASE_${Date.now()}`);
+      formDataToSend.append("case_id", caseId || `CASE_${Date.now()}`);
       
       uploadedFiles.forEach((file) => {
         formDataToSend.append("files", file);
@@ -297,6 +410,9 @@ export default function DischargeIntake() {
 
       const result = await response.json();
       console.log("Parser Agent Response:", result);
+      console.log("Autofill Data Structure:", result.autofill_data);
+      console.log("Contact Info:", result.autofill_data?.contact_info);
+      console.log("Discharge Info:", result.autofill_data?.discharge_info);
       
       if (result.status === "success" && result.autofill_data) {
         const autofillData = result.autofill_data;
@@ -393,20 +509,122 @@ export default function DischargeIntake() {
     setIsSubmitting(true);
 
     try {
-      const formDataToSend = new FormData();
-      formDataToSend.append('formData', JSON.stringify(formData));
-      
-      uploadedFiles.forEach((file, index) => {
-        formDataToSend.append(`file_${index}`, file);
-      });
+      // Prepare payload in the format expected by backend PatientInfo model
+      const payload = {
+        contact_info: {
+          name: formData.contactInfo?.name || formData.name || "",
+          phone1: formData.contactInfo?.phone1 || "",
+          phone2: formData.contactInfo?.phone2 || "",
+          date_of_birth: formData.contactInfo?.dateOfBirth || formData.dateOfBirth || "",
+          address: formData.contactInfo?.address || "",
+          apartment: formData.contactInfo?.apartment || "",
+          city: formData.contactInfo?.city || "",
+          state: formData.contactInfo?.state || "",
+          zip: formData.contactInfo?.zip || "",
+          emergency_contact_name: formData.contactInfo?.emergencyContactName || "",
+          emergency_contact_relationship: formData.contactInfo?.emergencyContactRelationship || "",
+          emergency_contact_phone: formData.contactInfo?.emergencyContactPhone || "",
+        },
+        discharge_info: {
+          discharging_facility: formData.dischargeInfo?.dischargingFacility || "",
+          discharging_facility_phone: formData.dischargeInfo?.dischargingFacilityPhone || "",
+          facility_address: formData.dischargeInfo?.facilityAddress || "",
+          facility_floor: formData.dischargeInfo?.facilityFloor || "",
+          facility_city: formData.dischargeInfo?.facilityCity || "",
+          facility_state: formData.dischargeInfo?.facilityState || "",
+          facility_zip: formData.dischargeInfo?.facilityZip || "",
+          medical_record_number: formData.dischargeInfo?.medicalRecordNumber || formData.medicalRecordNumber || "",
+          date_of_admission: formData.dischargeInfo?.dateOfAdmission || "",
+          planned_discharge_date: formData.dischargeInfo?.plannedDischargeDate || formData.dischargeDateTime || "",
+          discharged_to: formData.dischargeInfo?.dischargedTo || formData.plannedDestination || "",
+          discharge_address: formData.dischargeInfo?.dischargeAddress || "",
+          discharge_apartment: formData.dischargeInfo?.dischargeApartment || "",
+          discharge_city: formData.dischargeInfo?.dischargeCity || "",
+          discharge_state: formData.dischargeInfo?.dischargeState || "",
+          discharge_zip: formData.dischargeInfo?.dischargeZip || "",
+          discharge_phone: formData.dischargeInfo?.dischargePhone || "",
+          travel_outside_nyc: formData.dischargeInfo?.travelOutsideNyc || false,
+          travel_date_destination: formData.dischargeInfo?.travelDateDestination || "",
+        },
+        follow_up: {
+          appointment_date: formData.followUp?.appointmentDate || "",
+          physician_name: formData.followUp?.physicianName || "",
+          physician_phone: formData.followUp?.physicianPhone || "",
+          physician_cell: formData.followUp?.physicianCell || "",
+          physician_address: formData.followUp?.physicianAddress || "",
+          physician_city: formData.followUp?.physicianCity || "",
+          physician_state: formData.followUp?.physicianState || "",
+          physician_zip: formData.followUp?.physicianZip || "",
+          barriers_to_adherence: formData.followUp?.barriersToAdherence || [],
+          physical_disability: formData.followUp?.physicalDisability || "",
+          medical_condition: formData.followUp?.medicalCondition || formData.primaryDiagnosis || "",
+          substance_use: formData.followUp?.substanceUse || "",
+          mental_disorder: formData.followUp?.mentalDisorder || "",
+          other_barriers: formData.followUp?.otherBarriers || "",
+        },
+        lab_results: formData.labResults || {
+          smear1_date: "",
+          smear1_source: "",
+          smear1_result: "",
+          smear1_grade: "",
+          smear2_date: "",
+          smear2_source: "",
+          smear2_result: "",
+          smear2_grade: "",
+          smear3_date: "",
+          smear3_source: "",
+          smear3_result: "",
+          smear3_grade: "",
+        },
+        treatment_info: {
+          therapy_initiated_date: formData.treatmentInfo?.therapyInitiatedDate || "",
+          therapy_interrupted: formData.treatmentInfo?.therapyInterrupted || false,
+          interruption_reason: formData.treatmentInfo?.interruptionReason || "",
+          medications: formData.treatmentInfo?.medications || {},
+          frequency: formData.treatmentInfo?.frequency || "",
+          central_line_inserted: formData.treatmentInfo?.centralLineInserted || false,
+          days_of_medication_supplied: formData.treatmentInfo?.daysOfMedicationSupplied || "",
+          patient_agreed_to_dot: formData.treatmentInfo?.patientAgreedToDot || false,
+          form_filled_by_name: formData.treatmentInfo?.formFilledByName || formData.staffName || "",
+          form_filled_date: formData.treatmentInfo?.formFilledDate || formData.intakeDate || "",
+          responsible_physician_name: formData.treatmentInfo?.responsiblePhysicianName || "",
+          physician_license_number: formData.treatmentInfo?.physicianLicenseNumber || "",
+          physician_phone: formData.treatmentInfo?.physicianPhone || "",
+        },
+      };
+
+      console.log("📤 Submitting discharge workflow to backend...");
+      console.log("📋 Payload:", payload);
       
       const response = await fetch("http://localhost:8000/api/discharge", {
         method: "POST",
-        body: formDataToSend,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
+        const result = await response.json();
+        console.log("✅ Discharge workflow created:", result);
+        console.log("🤖 Coordinator Agent has been notified with filled form data");
+        
+        // IMPORTANT: Update localStorage with the backend-generated case_id
+        const backendCaseId = result.case_id;
+        localStorage.setItem('current_case_id', backendCaseId);
+        localStorage.setItem(`case_submitted_${backendCaseId}`, 'true');
+        
+        // Update component state with backend case ID
+        setCaseId(backendCaseId);
         setSubmitted(true);
+        setSubmittedCaseId(backendCaseId);
+        
+        console.log("💾 Updated case ID to backend value:", backendCaseId);
+        alert(`✅ Discharge workflow created successfully!\n\n📋 Case ID: ${backendCaseId}\n🤖 Coordinator Agent is processing your request...\n\n💡 You can now navigate to other tabs to track progress!`);
+      } else {
+        const error = await response.json();
+        console.error("❌ Error submitting discharge:", error);
+        alert(`Failed to submit discharge: ${error.detail || 'Unknown error'}`);
       }
     } catch (error) {
       console.error("Error submitting discharge:", error);
@@ -438,49 +656,85 @@ export default function DischargeIntake() {
     }
   };
 
-  if (submitted) {
-    return (
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        className="text-center py-20"
-      >
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-          className="inline-flex items-center justify-center w-24 h-24 rounded-full mb-6"
-          style={{
-            background: 'linear-gradient(135deg, #2D9F7E, #3DB896)',
-            boxShadow: '0 8px 32px rgba(45, 159, 126, 0.3)'
-          }}
-        >
-          <CheckCircle className="w-12 h-12 text-white" />
-        </motion.div>
-        <h3 
-          className="text-3xl font-bold mb-4"
-          style={{ fontFamily: 'Crimson Pro, serif', color: '#1A1D1E' }}
-        >
-          Discharge Coordination Initiated!
-        </h3>
-        <p className="text-lg mb-6" style={{ color: '#6B7575' }}>
-          Our AI agents are coordinating shelter, transport, resources, and aftercare services.
-        </p>
-        <motion.div
-          animate={{ scale: [1, 1.05, 1] }}
-          transition={{ duration: 2, repeat: Infinity }}
-          className="inline-flex items-center space-x-2 px-6 py-3 rounded-xl"
-          style={{
-            background: 'rgba(13, 115, 119, 0.08)',
-            color: '#0D7377'
-          }}
-        >
-          <Sparkles className="w-5 h-5" />
-          <span className="font-medium">Multi-Agent Coordination in Progress</span>
-        </motion.div>
-      </motion.div>
-    );
-  }
+  const handleStartNewCase = () => {
+    const newCaseId = `CASE_${Date.now()}`;
+    localStorage.setItem('current_case_id', newCaseId);
+    localStorage.removeItem(`case_submitted_${caseId}`);
+    
+    // Reset form
+    setSubmitted(false);
+    setSubmittedCaseId("");
+    setCaseId(newCaseId);
+    setCurrentStep(0);
+    setFormData({
+      name: "",
+      dateOfBirth: "",
+      medicalRecordNumber: "",
+      gender: "",
+      housingStatus: "homeless",
+      principalResidence: "",
+      primaryDiagnosis: "",
+      treatmentSummary: "",
+      dischargeDateTime: "",
+      medicallyStable: true,
+      plannedDestination: "",
+      acceptingAgencyName: "",
+      acceptingAgencyContact: "",
+      interimLocation: "",
+      transportationArranged: "",
+      followUpClinic: "",
+      mealOffered: "",
+      clothingProvided: "",
+      dischargeMedication: "",
+      medicationList: "",
+      infectiousDiseaseScreening: "",
+      insuranceScreening: "",
+      socialWorkerAssigned: "",
+      consentForReferral: "",
+      staffName: "",
+      intakeDate: new Date().toISOString().split('T')[0],
+      contactInfo: {
+        name: "",
+        phone1: "",
+        phone2: "",
+        dateOfBirth: "",
+        address: "",
+        apartment: "",
+        city: "",
+        state: "",
+        zip: "",
+        emergencyContactName: "",
+        emergencyContactRelationship: "",
+        emergencyContactPhone: "",
+      },
+      dischargeInfo: {
+        dischargingFacility: "",
+        dischargingFacilityPhone: "",
+        facilityAddress: "",
+        facilityCity: "",
+        facilityState: "",
+        facilityZip: "",
+        medicalRecordNumber: "",
+        dateOfAdmission: "",
+        plannedDischargeDate: "",
+        dischargedTo: "",
+      },
+      followUp: {
+        appointmentDate: "",
+        physicianName: "",
+        physicianPhone: "",
+        barriersToAdherence: "",
+        medicalCondition: "",
+      },
+      treatmentInfo: {
+        therapyInitiatedDate: "",
+        medications: "",
+        frequency: "",
+        daysOfMedicationSupplied: "",
+      },
+    });
+    setUploadedFiles([]);
+  };
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -502,7 +756,86 @@ export default function DischargeIntake() {
         <p className="text-lg" style={{ color: '#6B7575' }}>
           Coordinating accessible aftercare for patients experiencing homelessness
         </p>
+        {saveStatus && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-2 text-sm"
+            style={{ color: saveStatus === "saved" ? '#2D9F7E' : '#6B7575' }}
+          >
+            {saveStatus === "saving" ? "💾 Saving..." : "✅ Saved to database"}
+          </motion.div>
+        )}
       </motion.div>
+
+      {/* Success Banner */}
+      {submitted && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8 p-6 rounded-2xl"
+          style={{
+            background: 'linear-gradient(135deg, rgba(45, 159, 126, 0.1), rgba(61, 184, 150, 0.1))',
+            border: '2px solid #2D9F7E',
+            boxShadow: '0 4px 16px rgba(45, 159, 126, 0.2)'
+          }}
+        >
+          <div className="flex items-start justify-between">
+            <div className="flex items-start space-x-4">
+              <motion.div
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+                className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center"
+                style={{
+                  background: 'linear-gradient(135deg, #2D9F7E, #3DB896)',
+                  boxShadow: '0 4px 16px rgba(45, 159, 126, 0.3)'
+                }}
+              >
+                <CheckCircle className="w-6 h-6 text-white" />
+              </motion.div>
+              <div>
+                <h3 
+                  className="text-xl font-bold mb-2"
+                  style={{ fontFamily: 'Crimson Pro, serif', color: '#2D9F7E' }}
+                >
+                  ✅ Discharge Coordination Initiated!
+                </h3>
+                <p className="text-sm mb-3" style={{ color: '#1A1D1E' }}>
+                  Case ID: <span className="font-mono font-semibold">{submittedCaseId}</span>
+                </p>
+                <motion.div
+                  animate={{ opacity: [0.7, 1, 0.7] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="inline-flex items-center space-x-2 px-4 py-2 rounded-lg"
+                  style={{
+                    background: 'rgba(45, 159, 126, 0.15)',
+                    color: '#2D9F7E'
+                  }}
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span className="text-sm font-medium">Multi-Agent Coordination in Progress</span>
+                </motion.div>
+                <p className="text-sm mt-3" style={{ color: '#6B7575' }}>
+                  💡 Navigate to <strong>Workflow Timeline</strong>, <strong>Resource Map</strong>, or <strong>Transport Hub</strong> to track progress
+                </p>
+              </div>
+            </div>
+            <motion.button
+              type="button"
+              onClick={handleStartNewCase}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="px-4 py-2 rounded-lg text-sm font-medium text-white"
+              style={{
+                background: 'linear-gradient(135deg, #0D7377, #14919B)',
+                boxShadow: '0 2px 8px rgba(13, 115, 119, 0.3)'
+              }}
+            >
+              Start New Case
+            </motion.button>
+          </div>
+        </motion.div>
+      )}
 
       {/* Progress Steps */}
       <div className="mb-12">
@@ -1343,6 +1676,18 @@ export default function DischargeIntake() {
             <span>Next</span>
             <ArrowRight className="w-5 h-5" />
           </motion.button>
+        ) : submitted ? (
+          <motion.div
+            className="flex items-center space-x-2 px-8 py-3 rounded-xl font-semibold"
+            style={{
+              background: 'rgba(45, 159, 126, 0.1)',
+              border: '2px solid #2D9F7E',
+              color: '#2D9F7E'
+            }}
+          >
+            <CheckCircle className="w-5 h-5" />
+            <span>Coordination Active</span>
+          </motion.div>
         ) : (
           <motion.button
             type="button"

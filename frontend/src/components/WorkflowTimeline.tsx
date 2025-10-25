@@ -57,13 +57,144 @@ const WorkflowTimeline: React.FC = () => {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [steps, setSteps] = useState<WorkflowStep[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
+  const [caseId, setCaseId] = useState<string>("");
+  const [workflowData, setWorkflowData] = useState<any>(null);
 
   useEffect(() => {
+    // Get current case ID from localStorage
+    const storedCaseId = localStorage.getItem('current_case_id');
+    if (storedCaseId) {
+      setCaseId(storedCaseId);
+    }
+    
     initializeAgents();
     initializeSteps();
+    
+    // Start polling for real workflow data - only if case has been submitted
+    const pollInterval = setInterval(() => {
+      if (storedCaseId) {
+        const isSubmitted = localStorage.getItem(`case_submitted_${storedCaseId}`);
+        if (isSubmitted === 'true') {
+          fetchWorkflowData(storedCaseId);
+        }
+      }
+    }, 2000);
+    
     const cleanup = startSimulation();
-    return cleanup;
+    return () => {
+      clearInterval(pollInterval);
+      cleanup();
+    };
   }, []);
+
+  const fetchWorkflowData = async (currentCaseId: string) => {
+    try {
+      const response = await fetch(`http://localhost:8000/api/workflows/${currentCaseId}`);
+      if (response.ok) {
+        const workflow = await response.json();
+        
+        // Update agents based on backend workflow status
+        if (workflow) {
+          console.log("📊 Workflow data received:", workflow);
+          setWorkflowData(workflow);
+          updateAgentsFromBackend(workflow);
+          updateStepsFromBackend(workflow);
+        }
+      }
+    } catch (error) {
+      console.log("Workflow data not yet available:", error);
+    }
+  };
+
+  const updateAgentsFromBackend = (workflow: any) => {
+    setAgents(prevAgents => {
+      const updatedAgents = [...prevAgents];
+      
+      // Update based on workflow timeline
+      workflow.timeline?.forEach((timelineItem: any) => {
+        const agentId = getAgentIdFromStep(timelineItem.step);
+        const agentIndex = updatedAgents.findIndex(a => a.id === agentId);
+        
+        if (agentIndex !== -1) {
+          const status = timelineItem.status === "completed" ? "completed" : 
+                        timelineItem.status === "in_progress" ? "working" : "idle";
+          
+          updatedAgents[agentIndex] = {
+            ...updatedAgents[agentIndex],
+            status: status as any,
+            currentTask: timelineItem.description || updatedAgents[agentIndex].currentTask,
+            progress: status === "completed" ? 100 : status === "working" ? 65 : 0,
+            lastActivity: timelineItem.timestamp ? new Date(timelineItem.timestamp).toLocaleTimeString() : "Just now"
+          };
+        }
+      });
+      
+      return updatedAgents;
+    });
+  };
+
+  const updateStepsFromBackend = (workflow: any) => {
+    if (!workflow.timeline || workflow.timeline.length === 0) return;
+    
+    setSteps(prevSteps => {
+      const backendSteps = workflow.timeline.map((item: any, index: number) => ({
+        id: `step-${index}`,
+        name: item.step.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
+        status: item.status === "completed" ? "completed" as const : 
+                item.status === "in_progress" ? "in_progress" as const : 
+                item.status === "failed" ? "failed" as const : "pending" as const,
+        description: item.description || "",
+        agent: getAgentTypeFromStep(item.step),
+        duration: calculateDuration(item.timestamp),
+        logs: item.logs || [item.description]
+      }));
+      
+      return backendSteps.length > 0 ? backendSteps : prevSteps;
+    });
+  };
+
+  const getAgentIdFromStep = (step: string): string => {
+    const mapping: Record<string, string> = {
+      "intake_received": "hospital",
+      "coordinator_notified": "coordinator",
+      "shelter_search": "shelter",
+      "shelter_confirmed": "shelter",
+      "transport_requested": "transport",
+      "transport_scheduled": "transport",
+      "social_worker_assigned": "social",
+      "resources_confirmed": "resource",
+      "pharmacy_notified": "pharmacy",
+      "eligibility_checked": "eligibility",
+      "workflow_complete": "coordinator"
+    };
+    return mapping[step] || "coordinator";
+  };
+
+  const getAgentTypeFromStep = (step: string): string => {
+    const mapping: Record<string, string> = {
+      "intake_received": "HospitalAgent",
+      "coordinator_notified": "CoordinatorAgent",
+      "shelter_search": "ShelterAgent",
+      "shelter_confirmed": "ShelterAgent",
+      "transport_requested": "TransportAgent",
+      "transport_scheduled": "TransportAgent",
+      "social_worker_assigned": "SocialWorkerAgent",
+      "resources_confirmed": "ResourceAgent",
+      "pharmacy_notified": "PharmacyAgent",
+      "eligibility_checked": "EligibilityAgent",
+      "workflow_complete": "CoordinatorAgent"
+    };
+    return mapping[step] || "CoordinatorAgent";
+  };
+
+  const calculateDuration = (timestamp: string): string => {
+    if (!timestamp) return "0 min";
+    const now = new Date();
+    const then = new Date(timestamp);
+    const diffMs = now.getTime() - then.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    return diffMins < 1 ? "< 1 min" : `${diffMins} min`;
+  };
 
   const initializeAgents = () => {
     const initialAgents: Agent[] = [
@@ -228,70 +359,55 @@ const WorkflowTimeline: React.FC = () => {
       {
         id: "1",
         name: "Discharge Intake",
-        status: "completed",
-        description: "Patient details submitted by hospital staff",
+        status: "pending",
+        description: "Waiting for discharge form submission",
         agent: "HospitalAgent",
-        duration: "2 min",
-        logs: [
-          "Patient John Doe registered",
-          "Medical condition: Stable post-surgery",
-          "Accessibility needs: Wheelchair access required",
-          "Social needs: Mental health support needed"
-        ]
+        duration: "0 min",
+        logs: ["Ready to receive discharge request"]
       },
       {
         id: "2",
-        name: "Data Intelligence Query",
-        status: "in_progress",
-        description: "Fetch.ai agents querying Bright Data for real-time shelter information",
-        agent: "CoordinatorAgent",
-        duration: "3 min",
-        logs: [
-          "Querying SF HSH database",
-          "Filtering for wheelchair accessible shelters",
-          "Found 3 suitable options",
-          "Checking real-time availability..."
-        ]
-      },
-      {
-        id: "3",
-        name: "Shelter Verification",
-        status: "in_progress",
-        description: "Vapi voice calls confirming bed availability with shelters",
-        agent: "ShelterAgent",
-        duration: "2 min",
-        logs: [
-          "Calling Mission Neighborhood Resource Center",
-          "Verifying bed availability",
-          "Confirming accessibility features",
-          "Awaiting shelter response..."
-        ]
-      },
-      {
-        id: "4",
-        name: "Social Worker Assignment",
+        name: "Coordinator Notified",
         status: "pending",
-        description: "Connecting patient with appropriate social worker",
-        agent: "SocialWorkerAgent",
-        duration: "1 min",
+        description: "Coordinator Agent will orchestrate all downstream agents",
+        agent: "CoordinatorAgent",
+        duration: "0 min",
         logs: []
       },
       {
-        id: "5",
+        id: "3",
+        name: "Shelter Search",
+        status: "pending",
+        description: "Querying Bright Data for real-time shelter availability",
+        agent: "ShelterAgent",
+        duration: "0 min",
+        logs: []
+      },
+      {
+        id: "4",
         name: "Transport Coordination",
         status: "pending",
         description: "Arranging wheelchair-accessible transport",
         agent: "TransportAgent",
-        duration: "2 min",
+        duration: "0 min",
+        logs: []
+      },
+      {
+        id: "5",
+        name: "Social Worker Assignment",
+        status: "pending",
+        description: "Connecting patient with appropriate case manager",
+        agent: "SocialWorkerAgent",
+        duration: "0 min",
         logs: []
       },
       {
         id: "6",
-        name: "Follow-up Care Setup",
+        name: "Resource Coordination",
         status: "pending",
-        description: "Scheduling post-discharge check-ins and support",
-        agent: "FollowUpCareAgent",
-        duration: "1 min",
+        description: "Arranging meals, clothing, hygiene items",
+        agent: "ResourceAgent",
+        duration: "0 min",
         logs: []
       }
     ];
@@ -487,6 +603,83 @@ const WorkflowTimeline: React.FC = () => {
           Watch AI agents coordinate in real-time to ensure seamless patient care transitions
         </p>
       </motion.div>
+
+      {/* Active Case Banner or No Workflow Message */}
+      {workflowData && workflowData.patient ? (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8 p-6 rounded-2xl"
+          style={{
+            background: 'linear-gradient(135deg, rgba(13, 115, 119, 0.1), rgba(45, 159, 126, 0.1))',
+            border: '2px solid #0D7377',
+            boxShadow: '0 4px 16px rgba(13, 115, 119, 0.15)'
+          }}
+        >
+          <div className="flex items-start justify-between">
+            <div className="w-full">
+              <div className="flex items-center space-x-2 mb-3">
+                <motion.div
+                  animate={{ scale: [1, 1.2, 1] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="w-3 h-3 rounded-full bg-[#2D9F7E]"
+                />
+                <h3 className="text-lg font-semibold" style={{ color: '#0D7377', fontFamily: 'Crimson Pro, serif' }}>
+                  Active Case: {workflowData.case_id}
+                </h3>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <p style={{ color: '#6B7575' }}>Patient</p>
+                  <p className="font-semibold" style={{ color: '#1A1D1E' }}>
+                    {workflowData.patient.contact_info?.name || "Unknown"}
+                  </p>
+                </div>
+                <div>
+                  <p style={{ color: '#6B7575' }}>Hospital</p>
+                  <p className="font-semibold" style={{ color: '#1A1D1E' }}>
+                    {workflowData.patient.discharge_info?.discharging_facility || "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p style={{ color: '#6B7575' }}>Status</p>
+                  <p className="font-semibold capitalize" style={{ color: '#2D9F7E' }}>
+                    {workflowData.status}
+                  </p>
+                </div>
+                <div>
+                  <p style={{ color: '#6B7575' }}>Current Step</p>
+                  <p className="font-semibold capitalize" style={{ color: '#1A1D1E' }}>
+                    {workflowData.current_step?.replace(/_/g, ' ')}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      ) : (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8 p-6 rounded-2xl text-center"
+          style={{
+            background: 'rgba(224, 213, 199, 0.3)',
+            border: '1px solid #E0D5C7',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
+          }}
+        >
+          <Clock className="w-12 h-12 mx-auto mb-3 text-[#6B7575] opacity-50" />
+          <h3 
+            className="text-lg font-semibold mb-2"
+            style={{ fontFamily: 'Crimson Pro, serif', color: '#1A1D1E' }}
+          >
+            No Active Workflow
+          </h3>
+          <p className="text-sm" style={{ color: '#6B7575' }}>
+            Submit a discharge form on the <strong>Discharge Intake</strong> tab to start agent coordination
+          </p>
+        </motion.div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Agent Status Panel */}
