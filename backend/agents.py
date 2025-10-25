@@ -98,6 +98,27 @@ class AnalyticsData(Model):
     value: Any
     metadata: Dict[str, Any]
 
+class DocumentParseRequest(Model):
+    case_id: str
+    document_url: str  # URL or path to uploaded document
+    document_type: str  # "discharge_summary", "medical_record", "prescription", etc.
+    
+class ParsedDischargeData(Model):
+    case_id: str
+    patient_name: str
+    patient_dob: Optional[str] = None
+    medical_condition: str
+    diagnosis: Optional[str] = None
+    medications: List[Dict[str, str]]
+    allergies: Optional[str] = None
+    accessibility_needs: Optional[str] = None
+    dietary_needs: Optional[str] = None
+    social_needs: Optional[str] = None
+    follow_up_instructions: Optional[str] = None
+    discharge_date: str
+    hospital: str
+    confidence_score: float  # 0-1 indicating parsing confidence
+
 # Hospital Agent
 hospital_agent = Agent(
     name="hospital_agent",
@@ -625,6 +646,206 @@ async def store_metric(metric_data: Dict[str, Any]) -> None:
     # For demo, just log
     pass
 
+# ============================================
+# PARSER AGENT - Document Intelligence
+# ============================================
+
+# Parser Agent - Uses LlamaParse + Gemini for document parsing
+parser_agent = Agent(
+    name="parser_agent",
+    seed="parser_agent_seed_phrase_here",
+    port=8011,
+    endpoint=["http://127.0.0.1:8011/submit"],
+)
+
+@parser_agent.on_message(model=DocumentParseRequest)
+async def handle_document_parse(ctx: Context, sender: str, msg: DocumentParseRequest):
+    """Parser agent processes uploaded discharge documents using LlamaParse + Gemini"""
+    ctx.logger.info(f"Processing document parse request for {msg.case_id}")
+    
+    try:
+        # Step 1: Parse document with LlamaParse
+        parsed_text = await parse_document_with_llamaparse(msg.document_url, msg.document_type)
+        
+        # Step 2: Extract structured data with Gemini
+        extracted_data = await extract_data_with_gemini(parsed_text, msg.document_type)
+        
+        # Step 3: Create structured discharge data
+        parsed_data = ParsedDischargeData(
+            case_id=msg.case_id,
+            patient_name=extracted_data.get("patient_name", "Unknown"),
+            patient_dob=extracted_data.get("dob"),
+            medical_condition=extracted_data.get("medical_condition", ""),
+            diagnosis=extracted_data.get("diagnosis"),
+            medications=extracted_data.get("medications", []),
+            allergies=extracted_data.get("allergies"),
+            accessibility_needs=extracted_data.get("accessibility_needs"),
+            dietary_needs=extracted_data.get("dietary_needs"),
+            social_needs=extracted_data.get("social_needs"),
+            follow_up_instructions=extracted_data.get("follow_up_instructions"),
+            discharge_date=extracted_data.get("discharge_date", datetime.now().strftime("%Y-%m-%d")),
+            hospital=extracted_data.get("hospital", "Unknown Hospital"),
+            confidence_score=extracted_data.get("confidence_score", 0.85)
+        )
+        
+        # Step 4: Send parsed data to coordinator for autofill
+        await ctx.send(
+            "coordinator_agent_address",
+            WorkflowUpdate(
+                case_id=msg.case_id,
+                step="document_parsed",
+                status="completed",
+                details={
+                    "parsed_data": {
+                        "patient_name": parsed_data.patient_name,
+                        "medical_condition": parsed_data.medical_condition,
+                        "medications": parsed_data.medications,
+                        "accessibility_needs": parsed_data.accessibility_needs,
+                        "dietary_needs": parsed_data.dietary_needs,
+                        "social_needs": parsed_data.social_needs,
+                        "discharge_date": parsed_data.discharge_date,
+                        "hospital": parsed_data.hospital,
+                    },
+                    "confidence_score": parsed_data.confidence_score,
+                    "requires_review": parsed_data.confidence_score < 0.8
+                },
+                timestamp=datetime.now().isoformat()
+            )
+        )
+        
+        ctx.logger.info(f"Document parsing completed for {msg.case_id} with confidence {parsed_data.confidence_score}")
+        
+    except Exception as e:
+        ctx.logger.error(f"Error parsing document for {msg.case_id}: {str(e)}")
+        await ctx.send(
+            "coordinator_agent_address",
+            WorkflowUpdate(
+                case_id=msg.case_id,
+                step="document_parse",
+                status="error",
+                details={"error": str(e), "requires_manual_entry": True},
+                timestamp=datetime.now().isoformat()
+            )
+        )
+
+# Helper functions for ParserAgent
+async def parse_document_with_llamaparse(document_url: str, document_type: str) -> str:
+    """Parse document using LlamaParse API"""
+    # In production, use actual LlamaParse API
+    # from llama_parse import LlamaParse
+    # parser = LlamaParse(api_key=os.getenv("LLAMA_CLOUD_API_KEY"))
+    # documents = parser.load_data(document_url)
+    # return documents[0].text
+    
+    # Mock response for demo
+    mock_discharge_summary = """
+    DISCHARGE SUMMARY
+    
+    Patient Name: John Doe
+    Date of Birth: 01/15/1970
+    MRN: 123456789
+    
+    Admission Date: 10/20/2025
+    Discharge Date: 10/24/2025
+    
+    Hospital: San Francisco General Hospital
+    Attending Physician: Dr. Sarah Johnson
+    
+    PRIMARY DIAGNOSIS:
+    Acute exacerbation of chronic obstructive pulmonary disease (COPD)
+    
+    MEDICAL HISTORY:
+    - COPD (chronic)
+    - Type 2 Diabetes Mellitus
+    - Hypertension
+    
+    MEDICATIONS ON DISCHARGE:
+    1. Albuterol inhaler 90mcg, 2 puffs every 4-6 hours as needed
+    2. Lisinopril 10mg, once daily
+    3. Metformin 500mg, twice daily with meals
+    4. Prednisone 20mg, once daily for 5 days (taper)
+    
+    ALLERGIES:
+    Penicillin (rash)
+    
+    ACCESSIBILITY NEEDS:
+    Patient uses wheelchair for mobility due to severe COPD and limited exercise tolerance.
+    Requires wheelchair-accessible housing.
+    
+    DIETARY RECOMMENDATIONS:
+    - Diabetic diet (ADA guidelines)
+    - Low sodium (2g/day) for hypertension management
+    - Small, frequent meals to manage breathing difficulty
+    
+    SOCIAL NEEDS:
+    Patient is currently unhoused. Requires shelter placement with medical respite capacity.
+    Would benefit from connection to social worker for ongoing case management.
+    Mental health support recommended for anxiety related to housing instability.
+    
+    FOLLOW-UP INSTRUCTIONS:
+    - Follow up with primary care physician within 7 days
+    - Pulmonology appointment in 2 weeks
+    - Continue COPD action plan
+    - Seek emergency care if shortness of breath worsens
+    
+    DISCHARGE DISPOSITION:
+    Discharged to shelter (pending placement)
+    """
+    
+    return mock_discharge_summary
+
+async def extract_data_with_gemini(parsed_text: str, document_type: str) -> Dict[str, Any]:
+    """Extract structured data from parsed text using Gemini"""
+    # In production, use actual Gemini API
+    # import google.generativeai as genai
+    # genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+    # model = genai.GenerativeModel('gemini-pro')
+    # 
+    # prompt = f"""
+    # Extract the following information from this discharge summary:
+    # - Patient name
+    # - Date of birth
+    # - Medical condition/diagnosis
+    # - Medications (name, dosage, quantity)
+    # - Allergies
+    # - Accessibility needs
+    # - Dietary needs
+    # - Social needs
+    # - Follow-up instructions
+    # - Discharge date
+    # - Hospital name
+    # 
+    # Return as JSON.
+    # 
+    # Document:
+    # {parsed_text}
+    # """
+    # 
+    # response = model.generate_content(prompt)
+    # return json.loads(response.text)
+    
+    # Mock extracted data for demo
+    return {
+        "patient_name": "John Doe",
+        "dob": "01/15/1970",
+        "medical_condition": "Acute exacerbation of chronic obstructive pulmonary disease (COPD)",
+        "diagnosis": "COPD exacerbation, Type 2 Diabetes, Hypertension",
+        "medications": [
+            {"name": "Albuterol inhaler", "dosage": "90mcg", "quantity": "2 puffs every 4-6 hours"},
+            {"name": "Lisinopril", "dosage": "10mg", "quantity": "once daily"},
+            {"name": "Metformin", "dosage": "500mg", "quantity": "twice daily with meals"},
+            {"name": "Prednisone", "dosage": "20mg", "quantity": "once daily for 5 days"}
+        ],
+        "allergies": "Penicillin (rash)",
+        "accessibility_needs": "Wheelchair required for mobility. Requires wheelchair-accessible housing.",
+        "dietary_needs": "Diabetic diet (ADA guidelines), Low sodium (2g/day), Small frequent meals",
+        "social_needs": "Currently unhoused. Requires shelter with medical respite capacity. Needs social worker for case management. Mental health support for anxiety.",
+        "follow_up_instructions": "Follow up with PCP within 7 days, Pulmonology in 2 weeks, Continue COPD action plan",
+        "discharge_date": "10/24/2025",
+        "hospital": "San Francisco General Hospital",
+        "confidence_score": 0.92
+    }
+
 # Fund agents if needed
 if __name__ == "__main__":
     # Fund agents (this would be done with actual Fetch.ai tokens)
@@ -640,6 +861,7 @@ if __name__ == "__main__":
     fund_agent_if_low(pharmacy_agent.wallet.address())
     fund_agent_if_low(eligibility_agent.wallet.address())
     fund_agent_if_low(analytics_agent.wallet.address())
+    fund_agent_if_low(parser_agent.wallet.address())
     
     # Run all agents
     hospital_agent.run()
@@ -654,3 +876,4 @@ if __name__ == "__main__":
     pharmacy_agent.run()
     eligibility_agent.run()
     analytics_agent.run()
+    parser_agent.run()

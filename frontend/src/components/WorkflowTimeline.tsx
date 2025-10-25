@@ -20,13 +20,14 @@ import {
   ShoppingBag,
   Pill,
   FileCheck,
-  BarChart3
+  BarChart3,
+  FileText
 } from "lucide-react";
 
 interface Agent {
   id: string;
   name: string;
-  type: "HospitalAgent" | "CoordinatorAgent" | "SocialWorkerAgent" | "ShelterAgent" | "TransportAgent" | "FollowUpCareAgent" | "ResourceAgent" | "PharmacyAgent" | "EligibilityAgent" | "AnalyticsAgent";
+  type: "HospitalAgent" | "CoordinatorAgent" | "SocialWorkerAgent" | "ShelterAgent" | "TransportAgent" | "FollowUpCareAgent" | "ResourceAgent" | "PharmacyAgent" | "EligibilityAgent" | "AnalyticsAgent" | "ParserAgent";
   status: "idle" | "working" | "completed" | "error";
   currentTask: string;
   progress: number;
@@ -67,6 +68,16 @@ const WorkflowTimeline: React.FC = () => {
 
   const initializeAgents = () => {
     const initialAgents: Agent[] = [
+      {
+        id: "parser",
+        name: "Parser Agent",
+        type: "ParserAgent",
+        status: "idle",
+        currentTask: "Ready to parse discharge documents",
+        progress: 0,
+        lastActivity: "Waiting for document upload",
+        messages: []
+      },
       {
         id: "hospital",
         name: "Hospital Agent",
@@ -348,6 +359,8 @@ const WorkflowTimeline: React.FC = () => {
 
   const getAgentIcon = (type: Agent["type"]) => {
     switch (type) {
+      case "ParserAgent":
+        return <FileText className="w-5 h-5" />;
       case "HospitalAgent":
         return <Home className="w-5 h-5" />;
       case "CoordinatorAgent":

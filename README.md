@@ -72,6 +72,7 @@ All orchestrated seamlessly through voice, automation, and community data.
 #### Specialized Service Agents
 | Agent | Role | Port |
 |-------|------|------|
+| 📄 ParserAgent | Parses discharge documents with LlamaParse + Gemini to autofill intake | 8011 |
 | 🥣 ResourceAgent | Coordinates food, hygiene kits, and clothing post-discharge | 8007 |
 | 💊 PharmacyAgent | Ensures medication continuity via pharmacy coordination | 8008 |
 | 🧾 EligibilityAgent | Automates benefit verification (Medi-Cal, GA, SNAP) | 8009 |
@@ -79,11 +80,11 @@ All orchestrated seamlessly through voice, automation, and community data.
 
 **Agent Network Architecture:**
 ```
-Hospital → Coordinator → [Shelter, Transport, SocialWorker, FollowUp]
-                              ↓           ↓            ↓
-                         [Resource, Pharmacy, Eligibility]
-                                        ↓
-                                   Analytics
+Parser → Hospital → Coordinator → [Shelter, Transport, SocialWorker, FollowUp]
+                                        ↓           ↓            ↓
+                                   [Resource, Pharmacy, Eligibility]
+                                                  ↓
+                                             Analytics
 ```
 
 ### 🌐 Bright Data Integration (Data Intelligence Layer)
@@ -147,13 +148,14 @@ This will start:
 - Frontend: http://localhost:3000
 - Backend API: http://localhost:8000
 - API Docs: http://localhost:8000/docs
-- Fetch.ai Agents: Ports 8001-8010 (10 agents)
+- Fetch.ai Agents: Ports 8001-8011 (11 agents)
 
 ## 📦 Dependencies
 
 ### Backend (Python)
 - **Framework**: FastAPI 0.120.0, Uvicorn 0.30.6
-- **AI Agents**: uAgents 0.20.1, cosmpy 0.9.3
+- **AI Agents**: uAgents 0.22.10, cosmpy 0.9.3
+- **Document Parsing**: llama-parse 0.5.17, google-generativeai 0.8.3
 - **HTTP/Async**: requests 2.32.5, httpx 0.28.1, aiohttp 3.13.1
 - **Data**: pydantic 2.8.2, pydantic-settings 2.6.1
 - **Database**: SQLAlchemy 2.0.25, Alembic 1.13.1
@@ -167,6 +169,13 @@ This will start:
 - **Styling**: Tailwind CSS 3.4.1, PostCSS 8.4.38, Autoprefixer 10.4.21
 
 ## ✨ Key Features
+
+### 📄 AI-Powered Document Parsing
+- **Automatic form autofill** from discharge documents
+- **LlamaParse integration** for accurate document extraction
+- **Gemini AI** for intelligent data structuring
+- **Confidence scoring** for parsed data quality
+- **Manual review flagging** for low-confidence results
 
 ### 🗺️ Interactive Mapbox Integration
 - **Real-time shelter mapping** with Mapbox GL JS
