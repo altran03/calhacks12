@@ -45,6 +45,59 @@ class WorkflowUpdate(Model):
     details: Dict[str, Any]
     timestamp: str
 
+class ResourceRequest(Model):
+    case_id: str
+    patient_name: str
+    dietary_restrictions: Optional[str] = None
+    allergies: Optional[str] = None
+    needed_items: List[str]  # ["food", "hygiene_kit", "clothing"]
+    location: str
+
+class ResourceMatch(Model):
+    case_id: str
+    resource_type: str
+    provider_name: str
+    address: str
+    available_items: List[str]
+    phone: str
+    pickup_time: Optional[str] = None
+
+class PharmacyRequest(Model):
+    case_id: str
+    patient_name: str
+    medications: List[Dict[str, str]]  # [{"name": "Lisinopril", "dosage": "10mg", "quantity": "30"}]
+    insurance_info: Optional[str] = None
+    location: str
+
+class PharmacyMatch(Model):
+    case_id: str
+    pharmacy_name: str
+    address: str
+    phone: str
+    hours: str
+    medications_available: bool
+    cost_estimate: Optional[float] = None
+
+class EligibilityRequest(Model):
+    case_id: str
+    patient_name: str
+    dob: str
+    ssn_last4: Optional[str] = None
+    income_level: Optional[str] = None
+    current_benefits: List[str]
+
+class EligibilityResult(Model):
+    case_id: str
+    eligible_programs: List[Dict[str, Any]]
+    requires_manual_review: bool
+    next_steps: List[str]
+
+class AnalyticsData(Model):
+    metric_type: str
+    timestamp: str
+    value: Any
+    metadata: Dict[str, Any]
+
 # Hospital Agent
 hospital_agent = Agent(
     name="hospital_agent",
@@ -263,6 +316,315 @@ async def schedule_followup_call_via_vapi(case_id: str) -> bool:
     # This would integrate with Vapi API
     return True
 
+# ============================================
+# NEW AGENTS - Phase 1 Implementation
+# ============================================
+
+# Resource Agent - Coordinates food, hygiene kits, clothing
+resource_agent = Agent(
+    name="resource_agent",
+    seed="resource_agent_seed_phrase_here",
+    port=8007,
+    endpoint=["http://127.0.0.1:8007/submit"],
+)
+
+@resource_agent.on_message(model=ResourceRequest)
+async def handle_resource_request(ctx: Context, sender: str, msg: ResourceRequest):
+    """Resource agent coordinates post-discharge necessities"""
+    ctx.logger.info(f"Processing resource request for {msg.case_id}")
+    
+    # Query Bright Data for local nonprofits, pantries, donation centers
+    for item_type in msg.needed_items:
+        resource_data = await query_bright_data_for_resources(msg, item_type)
+        
+        # Match patient needs with available resources
+        if resource_data:
+            # Make reservation via Vapi call
+            reservation_confirmed = await reserve_resource_via_vapi(resource_data, msg)
+            
+            if reservation_confirmed:
+                await ctx.send(
+                    "coordinator_agent_address",
+                    WorkflowUpdate(
+                        case_id=msg.case_id,
+                        step=f"resource_{item_type}_confirmed",
+                        status="completed",
+                        details={
+                            "resource_type": item_type,
+                            "provider": resource_data.get("provider_name", ""),
+                            "pickup_time": resource_data.get("pickup_time", "TBD"),
+                            "dietary_match": bool(msg.dietary_restrictions),
+                        },
+                        timestamp=datetime.now().isoformat()
+                    )
+                )
+
+# Pharmacy Agent - Ensures medication continuity
+pharmacy_agent = Agent(
+    name="pharmacy_agent",
+    seed="pharmacy_agent_seed_phrase_here",
+    port=8008,
+    endpoint=["http://127.0.0.1:8008/submit"],
+)
+
+@pharmacy_agent.on_message(model=PharmacyRequest)
+async def handle_pharmacy_request(ctx: Context, sender: str, msg: PharmacyRequest):
+    """Pharmacy agent ensures post-discharge medication access"""
+    ctx.logger.info(f"Processing pharmacy request for {msg.case_id}")
+    
+    # Query Bright Data for 24/7 or low-cost pharmacies near patient location
+    pharmacies = await query_bright_data_for_pharmacies(msg.location)
+    
+    for pharmacy in pharmacies[:3]:  # Try top 3 pharmacies
+        # Call pharmacy via Vapi to confirm medication availability
+        availability = await check_medication_availability_via_vapi(
+            pharmacy, 
+            msg.medications
+        )
+        
+        if availability.get("all_available", False):
+            await ctx.send(
+                "coordinator_agent_address",
+                WorkflowUpdate(
+                    case_id=msg.case_id,
+                    step="pharmacy_confirmed",
+                    status="completed",
+                    details={
+                        "pharmacy_name": pharmacy.get("name", ""),
+                        "address": pharmacy.get("address", ""),
+                        "phone": pharmacy.get("phone", ""),
+                        "hours": pharmacy.get("hours", "24/7"),
+                        "cost_estimate": availability.get("cost_estimate", 0),
+                        "medications_ready": True,
+                    },
+                    timestamp=datetime.now().isoformat()
+                )
+            )
+            break  # Found a pharmacy, exit loop
+    else:
+        # No pharmacy found with all medications
+        ctx.logger.warning(f"Could not find pharmacy with all medications for {msg.case_id}")
+        await ctx.send(
+            "social_worker_agent_address",
+            WorkflowUpdate(
+                case_id=msg.case_id,
+                step="pharmacy_search",
+                status="needs_manual_intervention",
+                details={"reason": "medications not available at nearby pharmacies"},
+                timestamp=datetime.now().isoformat()
+            )
+        )
+
+# Eligibility Agent - Automates benefit verification
+eligibility_agent = Agent(
+    name="eligibility_agent",
+    seed="eligibility_agent_seed_phrase_here",
+    port=8009,
+    endpoint=["http://127.0.0.1:8009/submit"],
+)
+
+@eligibility_agent.on_message(model=EligibilityRequest)
+async def handle_eligibility_check(ctx: Context, sender: str, msg: EligibilityRequest):
+    """Eligibility agent verifies public benefit eligibility"""
+    ctx.logger.info(f"Processing eligibility check for {msg.case_id}")
+    
+    # Query public benefit APIs (Medi-Cal, General Assistance, SNAP, etc.)
+    eligible_programs = []
+    requires_manual = False
+    
+    # Check Medi-Cal eligibility
+    medi_cal_eligible = await check_medi_cal_eligibility(msg)
+    if medi_cal_eligible.get("eligible"):
+        eligible_programs.append({
+            "program": "Medi-Cal",
+            "status": "eligible",
+            "coverage_start": medi_cal_eligible.get("start_date"),
+            "benefits": medi_cal_eligible.get("benefits", [])
+        })
+    
+    # Check General Assistance
+    ga_eligible = await check_general_assistance_eligibility(msg)
+    if ga_eligible.get("eligible"):
+        eligible_programs.append({
+            "program": "General Assistance",
+            "status": "eligible",
+            "monthly_amount": ga_eligible.get("amount"),
+        })
+    elif ga_eligible.get("needs_review"):
+        requires_manual = True
+    
+    # Check SNAP (CalFresh)
+    snap_eligible = await check_snap_eligibility(msg)
+    if snap_eligible.get("eligible"):
+        eligible_programs.append({
+            "program": "CalFresh (SNAP)",
+            "status": "eligible",
+            "monthly_amount": snap_eligible.get("amount"),
+        })
+    
+    # Send results back to coordinator
+    await ctx.send(
+        "coordinator_agent_address",
+        WorkflowUpdate(
+            case_id=msg.case_id,
+            step="eligibility_checked",
+            status="completed" if not requires_manual else "needs_review",
+            details={
+                "eligible_programs": eligible_programs,
+                "requires_manual_review": requires_manual,
+                "total_monthly_benefits": sum(
+                    p.get("monthly_amount", 0) for p in eligible_programs
+                ),
+            },
+            timestamp=datetime.now().isoformat()
+        )
+    )
+    
+    # If expedited benefits available, notify social worker
+    if any(p.get("program") == "Medi-Cal" for p in eligible_programs):
+        await ctx.send(
+            "social_worker_agent_address",
+            WorkflowUpdate(
+                case_id=msg.case_id,
+                step="benefits_expedited",
+                status="info",
+                details={"message": "Patient eligible for immediate Medi-Cal coverage"},
+                timestamp=datetime.now().isoformat()
+            )
+        )
+
+# Analytics Agent - System metrics and reporting
+analytics_agent = Agent(
+    name="analytics_agent",
+    seed="analytics_agent_seed_phrase_here",
+    port=8010,
+    endpoint=["http://127.0.0.1:8010/submit"],
+)
+
+# Analytics agent listens to all WorkflowUpdate messages
+@analytics_agent.on_message(model=WorkflowUpdate)
+async def collect_analytics(ctx: Context, sender: str, msg: WorkflowUpdate):
+    """Analytics agent collects non-PII metrics"""
+    # Anonymize and aggregate data
+    metric_data = {
+        "step": msg.step,
+        "status": msg.status,
+        "timestamp": msg.timestamp,
+        "case_id_hash": hash(msg.case_id),  # Anonymized
+    }
+    
+    # Store metrics (in production, this would go to a database or analytics service)
+    await store_metric(metric_data)
+    
+    ctx.logger.info(f"Analytics: Recorded {msg.step} - {msg.status}")
+
+# Helper functions for new agents
+async def query_bright_data_for_resources(request: ResourceRequest, item_type: str) -> Dict[str, Any]:
+    """Query Bright Data for local nonprofits and resource centers"""
+    # Mock data for demo - in production, use Bright Data API
+    resource_map = {
+        "food": {
+            "provider_name": "SF-Marin Food Bank",
+            "address": "900 Pennsylvania Ave, San Francisco, CA 94107",
+            "phone": "(415) 282-1900",
+            "available_items": ["groceries", "prepared meals", "dietary-specific meals"],
+            "pickup_time": "Monday-Friday 9am-5pm"
+        },
+        "hygiene_kit": {
+            "provider_name": "Lava Mae",
+            "address": "Mobile service - Mission District",
+            "phone": "(415) 354-5282",
+            "available_items": ["hygiene kits", "toiletries", "towels"],
+            "pickup_time": "Daily 10am-4pm"
+        },
+        "clothing": {
+            "provider_name": "St. Anthony's Clothing Closet",
+            "address": "150 Golden Gate Ave, San Francisco, CA 94102",
+            "phone": "(415) 592-2700",
+            "available_items": ["clothing", "shoes", "winter gear"],
+            "pickup_time": "Monday-Saturday 8am-4pm"
+        }
+    }
+    return resource_map.get(item_type, {})
+
+async def reserve_resource_via_vapi(resource_data: Dict[str, Any], request: ResourceRequest) -> bool:
+    """Reserve resources via Vapi voice call"""
+    # In production, make Vapi call to resource provider
+    return True
+
+async def query_bright_data_for_pharmacies(location: str) -> List[Dict[str, Any]]:
+    """Query Bright Data for nearby pharmacies"""
+    # Mock data - in production, use Bright Data web scraping
+    return [
+        {
+            "name": "Walgreens - Mission District",
+            "address": "2690 Mission St, San Francisco, CA 94110",
+            "phone": "(415) 826-1211",
+            "hours": "24/7",
+            "type": "retail_pharmacy"
+        },
+        {
+            "name": "SF General Hospital Outpatient Pharmacy",
+            "address": "1001 Potrero Ave, San Francisco, CA 94110",
+            "phone": "(415) 206-8387",
+            "hours": "Mon-Fri 8am-6pm",
+            "type": "hospital_pharmacy",
+            "low_cost": True
+        },
+        {
+            "name": "CVS Pharmacy",
+            "address": "2300 16th St, San Francisco, CA 94103",
+            "phone": "(415) 861-3136",
+            "hours": "24/7",
+            "type": "retail_pharmacy"
+        }
+    ]
+
+async def check_medication_availability_via_vapi(pharmacy: Dict[str, Any], medications: List[Dict[str, str]]) -> Dict[str, Any]:
+    """Check medication availability via Vapi call"""
+    # In production, call pharmacy via Vapi API
+    # Mock response
+    return {
+        "all_available": True,
+        "cost_estimate": 25.50,
+        "ready_time": "30 minutes"
+    }
+
+async def check_medi_cal_eligibility(request: EligibilityRequest) -> Dict[str, Any]:
+    """Check Medi-Cal eligibility via public API"""
+    # In production, integrate with CA DHCS API or county eligibility systems
+    # Mock response based on income level
+    if request.income_level and request.income_level.lower() in ["low", "very_low", "none"]:
+        return {
+            "eligible": True,
+            "start_date": datetime.now().isoformat(),
+            "benefits": ["medical", "dental", "vision", "prescriptions"]
+        }
+    return {"eligible": False}
+
+async def check_general_assistance_eligibility(request: EligibilityRequest) -> Dict[str, Any]:
+    """Check General Assistance eligibility"""
+    # Mock response
+    return {
+        "eligible": True,
+        "amount": 588.00,  # SF GA monthly amount (example)
+        "needs_review": False
+    }
+
+async def check_snap_eligibility(request: EligibilityRequest) -> Dict[str, Any]:
+    """Check SNAP/CalFresh eligibility"""
+    # Mock response
+    return {
+        "eligible": True,
+        "amount": 281.00,  # Average monthly SNAP benefit
+    }
+
+async def store_metric(metric_data: Dict[str, Any]) -> None:
+    """Store analytics metric (non-PII)"""
+    # In production, write to database or analytics service
+    # For demo, just log
+    pass
+
 # Fund agents if needed
 if __name__ == "__main__":
     # Fund agents (this would be done with actual Fetch.ai tokens)
@@ -273,10 +635,22 @@ if __name__ == "__main__":
     fund_agent_if_low(social_worker_agent.wallet.address())
     fund_agent_if_low(followup_agent.wallet.address())
     
-    # Run agents
+    # Fund new Phase 1 agents
+    fund_agent_if_low(resource_agent.wallet.address())
+    fund_agent_if_low(pharmacy_agent.wallet.address())
+    fund_agent_if_low(eligibility_agent.wallet.address())
+    fund_agent_if_low(analytics_agent.wallet.address())
+    
+    # Run all agents
     hospital_agent.run()
     coordinator_agent.run()
     shelter_agent.run()
     transport_agent.run()
     social_worker_agent.run()
     followup_agent.run()
+    
+    # Run new Phase 1 agents
+    resource_agent.run()
+    pharmacy_agent.run()
+    eligibility_agent.run()
+    analytics_agent.run()

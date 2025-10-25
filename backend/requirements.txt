@@ -1,13 +1,40 @@
+# FastAPI and server
 fastapi==0.120.0
-uvicorn==0.30.6
+uvicorn[standard]==0.30.6
 python-multipart==0.0.20
+
+# Data validation
 pydantic==2.8.2
+pydantic-settings==2.6.1
+
+# Environment and config
 python-dotenv==1.1.1
+
+# HTTP requests
 requests==2.32.5
-ngrok==1.4.0
-uagents==0.22.10
-websockets==15.0.1
+httpx==0.28.1
 aiohttp==3.13.1
+
+# Fetch.ai uAgents
+uagents==0.22.10
+cosmpy==0.9.3
+
+# WebSockets
+websockets==15.0.1
+
+# Database
 sqlalchemy==2.0.25
 alembic==1.13.1
 
+# ngrok for webhooks
+ngrok==1.4.0
+
+# Testing
+pytest==8.3.3
+pytest-asyncio==0.24.0
+pytest-cov==5.0.0
+
+# Code quality
+black==25.1.0
+ruff==0.10.2
+mypy==1.15.0

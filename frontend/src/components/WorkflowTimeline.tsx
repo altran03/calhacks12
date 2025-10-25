@@ -16,13 +16,17 @@ import {
   Network,
   ArrowRight,
   ArrowDown,
-  ArrowUp
+  ArrowUp,
+  ShoppingBag,
+  Pill,
+  FileCheck,
+  BarChart3
 } from "lucide-react";
 
 interface Agent {
   id: string;
   name: string;
-  type: "HospitalAgent" | "CoordinatorAgent" | "SocialWorkerAgent" | "ShelterAgent" | "TransportAgent" | "FollowUpCareAgent";
+  type: "HospitalAgent" | "CoordinatorAgent" | "SocialWorkerAgent" | "ShelterAgent" | "TransportAgent" | "FollowUpCareAgent" | "ResourceAgent" | "PharmacyAgent" | "EligibilityAgent" | "AnalyticsAgent";
   status: "idle" | "working" | "completed" | "error";
   currentTask: string;
   progress: number;
@@ -160,11 +164,60 @@ const WorkflowTimeline: React.FC = () => {
         id: "followup",
         name: "Follow-up Care Agent",
         type: "FollowUpCareAgent",
-        status: "pending",
+        status: "idle",
         currentTask: "Scheduling post-discharge check-in",
         progress: 0,
         lastActivity: "Waiting",
         messages: []
+      },
+      {
+        id: "resource",
+        name: "Resource Agent",
+        type: "ResourceAgent",
+        status: "idle",
+        currentTask: "Ready to coordinate food, hygiene, clothing",
+        progress: 0,
+        lastActivity: "Waiting",
+        messages: []
+      },
+      {
+        id: "pharmacy",
+        name: "Pharmacy Agent",
+        type: "PharmacyAgent",
+        status: "idle",
+        currentTask: "Ready to ensure medication continuity",
+        progress: 0,
+        lastActivity: "Waiting",
+        messages: []
+      },
+      {
+        id: "eligibility",
+        name: "Eligibility Agent",
+        type: "EligibilityAgent",
+        status: "idle",
+        currentTask: "Ready to verify benefit eligibility",
+        progress: 0,
+        lastActivity: "Waiting",
+        messages: []
+      },
+      {
+        id: "analytics",
+        name: "Analytics Agent",
+        type: "AnalyticsAgent",
+        status: "working",
+        currentTask: "Collecting system metrics",
+        progress: 15,
+        lastActivity: "Just now",
+        messages: [
+          {
+            id: "a1",
+            timestamp: "10:00 AM",
+            from: "AnalyticsAgent",
+            to: "System",
+            message: "Recording workflow metrics for case #12345",
+            type: "notification"
+          }
+        ]
       }
     ];
     setAgents(initialAgents);
@@ -307,6 +360,14 @@ const WorkflowTimeline: React.FC = () => {
         return <Truck className="w-5 h-5" />;
       case "FollowUpCareAgent":
         return <MessageSquare className="w-5 h-5" />;
+      case "ResourceAgent":
+        return <ShoppingBag className="w-5 h-5" />;
+      case "PharmacyAgent":
+        return <Pill className="w-5 h-5" />;
+      case "EligibilityAgent":
+        return <FileCheck className="w-5 h-5" />;
+      case "AnalyticsAgent":
+        return <BarChart3 className="w-5 h-5" />;
       default:
         return <Brain className="w-5 h-5" />;
     }
@@ -321,6 +382,7 @@ const WorkflowTimeline: React.FC = () => {
       case "error":
         return "bg-red-100 text-red-800 border-red-200";
       case "idle":
+        return "bg-gray-100 text-gray-600 border-gray-200";
       default:
         return "bg-gray-100 text-gray-800 border-gray-200";
     }
@@ -369,17 +431,17 @@ const WorkflowTimeline: React.FC = () => {
               <Activity className="w-5 h-5 mr-2 text-blue-500" />
               Agent Status
             </h3>
-            <div className="space-y-4">
+        <div className="space-y-4">
               <AnimatePresence>
                 {agents.map((agent) => (
-                  <motion.div
+            <motion.div
                     key={agent.id}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     className={`p-4 rounded-lg border ${getAgentStatusColor(agent.status)} cursor-pointer transition-all hover:shadow-md`}
                     onClick={() => setSelectedAgent(agent)}
-                  >
-                    <div className="flex items-center justify-between mb-2">
+            >
+              <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center">
                         <div className="mr-3 p-2 bg-white rounded-lg">
                           {getAgentIcon(agent.type)}
@@ -413,12 +475,12 @@ const WorkflowTimeline: React.FC = () => {
                             transition={{ duration: 0.5 }}
                           />
                         </div>
-                      </div>
+              </div>
                     )}
                     
                     <p className="text-xs mt-2 opacity-60">Last activity: {agent.lastActivity}</p>
-                  </motion.div>
-                ))}
+            </motion.div>
+          ))}
               </AnimatePresence>
             </div>
           </div>
@@ -430,8 +492,8 @@ const WorkflowTimeline: React.FC = () => {
             <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
               <Clock className="w-5 h-5 mr-2 text-purple-500" />
               Workflow Timeline
-            </h3>
-            
+              </h3>
+
             <div className="relative pl-8">
               {steps.map((step, index) => (
                 <motion.div
