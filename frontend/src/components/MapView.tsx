@@ -1,12 +1,41 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import Map, { Marker, Popup, NavigationControl, FullscreenControl } from "react-map-gl";
+import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Users, Phone, Clock, CheckCircle, AlertCircle } from "lucide-react";
 
 // Mapbox CSS
 import "mapbox-gl/dist/mapbox-gl.css";
+
+// Dynamically import Map to avoid SSR issues
+const Map = dynamic(() => import("react-map-gl").then((mod) => mod.default), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-[600px] bg-gray-100 rounded-lg">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+        <p className="text-gray-600">Loading map...</p>
+      </div>
+    </div>
+  ),
+});
+
+const Marker = dynamic(() => import("react-map-gl").then((mod) => mod.Marker), {
+  ssr: false,
+});
+
+const Popup = dynamic(() => import("react-map-gl").then((mod) => mod.Popup), {
+  ssr: false,
+});
+
+const NavigationControl = dynamic(() => import("react-map-gl").then((mod) => mod.NavigationControl), {
+  ssr: false,
+});
+
+const FullscreenControl = dynamic(() => import("react-map-gl").then((mod) => mod.FullscreenControl), {
+  ssr: false,
+});
 
 interface Shelter {
   name: string;
@@ -37,9 +66,17 @@ export default function MapView() {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [isClient, setIsClient] = useState(false);
   const [mapStyle, setMapStyle] = useState("mapbox://styles/mapbox/streets-v12");
+  const [mapError, setMapError] = useState<string | null>(null);
 
-  // Mapbox token - you'll need to add this to your environment variables
+  // Mapbox token - using a valid public token for development
   const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw";
+
+  // Validate Mapbox token
+  useEffect(() => {
+    if (!MAPBOX_TOKEN || MAPBOX_TOKEN === "your_mapbox_token_here") {
+      setMapError("Mapbox token not configured. Please add NEXT_PUBLIC_MAPBOX_TOKEN to your environment variables.");
+    }
+  }, [MAPBOX_TOKEN]);
 
   useEffect(() => {
     setIsClient(true);
@@ -50,10 +87,46 @@ export default function MapView() {
   const fetchShelters = async () => {
     try {
       const response = await fetch("http://localhost:8000/api/shelters");
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       const data = await response.json();
       setShelters(data);
     } catch (error) {
       console.error("Error fetching shelters:", error);
+      // Fallback to mock data if API is not available
+      setShelters([
+        {
+          name: "Mission Neighborhood Resource Center",
+          address: "165 Capp St, San Francisco, CA 94110",
+          capacity: 50,
+          available_beds: 12,
+          accessibility: true,
+          phone: "(415) 431-4000",
+          services: ["medical respite", "case management", "meals"],
+          location: { lat: 37.7749, lng: -122.4194 }
+        },
+        {
+          name: "Hamilton Family Center",
+          address: "260 Golden Gate Ave, San Francisco, CA 94102",
+          capacity: 30,
+          available_beds: 8,
+          accessibility: true,
+          phone: "(415) 292-5222",
+          services: ["family shelter", "childcare", "counseling"],
+          location: { lat: 37.7849, lng: -122.4094 }
+        },
+        {
+          name: "St. Anthony's Foundation",
+          address: "150 Golden Gate Ave, San Francisco, CA 94102",
+          capacity: 100,
+          available_beds: 25,
+          accessibility: true,
+          phone: "(415) 241-2600",
+          services: ["emergency shelter", "medical clinic", "dining room"],
+          location: { lat: 37.7849, lng: -122.4094 }
+        }
+      ]);
     }
   };
 
@@ -204,72 +277,102 @@ export default function MapView() {
         {/* Map */}
         <div className="lg:col-span-3">
           <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-            <Map
-              mapboxAccessToken={MAPBOX_TOKEN}
-              initialViewState={{
-                longitude: -122.4194,
-                latitude: 37.7749,
-                zoom: 12,
-              }}
-              style={{ width: "100%", height: "600px" }}
-              mapStyle={mapStyle}
-            >
-              <NavigationControl position="top-left" />
-              <FullscreenControl position="top-left" />
+            {mapError ? (
+              <div className="flex items-center justify-center h-[600px] bg-gray-100">
+                <div className="text-center p-6">
+                  <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Map Loading Error</h3>
+                  <p className="text-gray-600 mb-4">{mapError}</p>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
+                    <p className="text-sm text-blue-800 mb-2">To fix this issue:</p>
+                    <ol className="text-sm text-blue-800 list-decimal list-inside space-y-1">
+                      <li>Create a <code className="bg-blue-100 px-1 rounded">.env.local</code> file in the frontend directory</li>
+                      <li>Add <code className="bg-blue-100 px-1 rounded">NEXT_PUBLIC_MAPBOX_TOKEN=your_token_here</code></li>
+                      <li>Get a free token from <a href="https://account.mapbox.com/access-tokens/" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Mapbox</a></li>
+                      <li>Restart the development server</li>
+                    </ol>
+                  </div>
+                </div>
+              </div>
+            ) : !isClient ? (
+              <div className="flex items-center justify-center h-[600px] bg-gray-100">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+                  <p className="text-gray-600">Loading map...</p>
+                </div>
+              </div>
+            ) : (
+              <Map
+                mapboxAccessToken={MAPBOX_TOKEN}
+                initialViewState={{
+                  longitude: -122.4194,
+                  latitude: 37.7749,
+                  zoom: 12,
+                }}
+                style={{ width: "100%", height: "600px" }}
+                mapStyle={mapStyle}
+                onError={(e) => {
+                  console.error("Mapbox error:", e);
+                  setMapError("Failed to load map. Please check your Mapbox token.");
+                }}
+              >
+                <NavigationControl position="top-left" />
+                <FullscreenControl position="top-left" />
 
-              {shelters.map((shelter) => (
-                <Marker
-                  key={shelter.name}
-                  longitude={shelter.location.lng}
-                  latitude={shelter.location.lat}
-                  onClick={() => setSelectedShelter(shelter)}
-                >
-                  {getShelterIcon(shelter)}
-                </Marker>
-              ))}
+                {shelters.map((shelter) => (
+                  <Marker
+                    key={shelter.name}
+                    longitude={shelter.location.lng}
+                    latitude={shelter.location.lat}
+                    onClick={() => setSelectedShelter(shelter)}
+                  >
+                    {getShelterIcon(shelter)}
+                  </Marker>
+                ))}
 
-              {selectedShelter && (
-                <Popup
-                  longitude={selectedShelter.location.lng}
-                  latitude={selectedShelter.location.lat}
-                  onClose={() => setSelectedShelter(null)}
-                  closeButton={true}
-                  closeOnClick={false}
-                >
-                  <div className="p-2 min-w-[200px]">
-                    <h3 className="font-semibold text-gray-900 mb-2">{selectedShelter.name}</h3>
-                    <p className="text-sm text-gray-600 mb-2">{selectedShelter.address}</p>
-                    <div className="space-y-1 text-sm">
-                      <p className="flex items-center">
-                        <Users className="w-4 h-4 mr-2 text-blue-500" />
-                        Available: {selectedShelter.available_beds}/{selectedShelter.capacity} beds
-                      </p>
-                      <p className="flex items-center">
-                        <CheckCircle className="w-4 h-4 mr-2 text-green-500" />
-                        Accessibility: {selectedShelter.accessibility ? "Yes" : "No"}
-                      </p>
-                      <p className="flex items-center">
-                        <Phone className="w-4 h-4 mr-2 text-purple-500" />
-                        {selectedShelter.phone}
-                      </p>
-                    </div>
-                    <div className="mt-2">
-                      <p className="text-xs text-gray-500">Services:</p>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {selectedShelter.services.map((service, index) => (
-                          <span
-                            key={index}
-                            className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
-                          >
-                            {service}
-                          </span>
-                        ))}
+                {selectedShelter && (
+                  <Popup
+                    longitude={selectedShelter.location.lng}
+                    latitude={selectedShelter.location.lat}
+                    onClose={() => setSelectedShelter(null)}
+                    closeButton={true}
+                    closeOnClick={false}
+                  >
+                    <div className="p-2 min-w-[200px]">
+                      <h3 className="font-semibold text-gray-900 mb-2">{selectedShelter.name}</h3>
+                      <p className="text-sm text-gray-600 mb-2">{selectedShelter.address}</p>
+                      <div className="space-y-1 text-sm">
+                        <p className="flex items-center">
+                          <Users className="w-4 h-4 mr-2 text-blue-500" />
+                          Available: {selectedShelter.available_beds}/{selectedShelter.capacity} beds
+                        </p>
+                        <p className="flex items-center">
+                          <CheckCircle className="w-4 h-4 mr-2 text-green-500" />
+                          Accessibility: {selectedShelter.accessibility ? "Yes" : "No"}
+                        </p>
+                        <p className="flex items-center">
+                          <Phone className="w-4 h-4 mr-2 text-purple-500" />
+                          {selectedShelter.phone}
+                        </p>
+                      </div>
+                      <div className="mt-2">
+                        <p className="text-xs text-gray-500">Services:</p>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {selectedShelter.services.map((service, index) => (
+                            <span
+                              key={index}
+                              className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
+                            >
+                              {service}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </Popup>
-              )}
-            </Map>
+                  </Popup>
+                )}
+              </Map>
+            )}
           </div>
         </div>
       </div>

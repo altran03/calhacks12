@@ -24,16 +24,97 @@ app.add_middleware(
 )
 
 # Pydantic models
-class PatientInfo(BaseModel):
+class PatientContactInfo(BaseModel):
     name: str
-    age: int
-    medical_condition: str
-    accessibility_needs: Optional[str] = None
-    dietary_needs: Optional[str] = None
-    social_needs: Optional[str] = None
-    discharge_date: str
-    hospital: str
-    contact_phone: Optional[str] = None
+    phone1: Optional[str] = None
+    phone2: Optional[str] = None
+    date_of_birth: str
+    address: str
+    apartment: Optional[str] = None
+    city: str
+    state: str
+    zip: str
+    emergency_contact_name: Optional[str] = None
+    emergency_contact_relationship: Optional[str] = None
+    emergency_contact_phone: Optional[str] = None
+
+class DischargeInformation(BaseModel):
+    discharging_facility: str
+    discharging_facility_phone: Optional[str] = None
+    facility_address: str
+    facility_floor: Optional[str] = None
+    facility_city: str
+    facility_state: str
+    facility_zip: str
+    medical_record_number: str
+    date_of_admission: str
+    planned_discharge_date: str
+    discharged_to: str
+    discharge_address: Optional[str] = None
+    discharge_apartment: Optional[str] = None
+    discharge_city: Optional[str] = None
+    discharge_state: Optional[str] = None
+    discharge_zip: Optional[str] = None
+    discharge_phone: Optional[str] = None
+    travel_outside_nyc: bool = False
+    travel_date_destination: Optional[str] = None
+
+class FollowUpAppointment(BaseModel):
+    appointment_date: Optional[str] = None
+    physician_name: Optional[str] = None
+    physician_phone: Optional[str] = None
+    physician_cell: Optional[str] = None
+    physician_address: Optional[str] = None
+    physician_city: Optional[str] = None
+    physician_state: Optional[str] = None
+    physician_zip: Optional[str] = None
+    barriers_to_adherence: List[str] = []
+    physical_disability: Optional[str] = None
+    medical_condition: Optional[str] = None
+    substance_use: Optional[str] = None
+    mental_disorder: Optional[str] = None
+    other_barriers: Optional[str] = None
+
+class LaboratoryResults(BaseModel):
+    smear1_date: Optional[str] = None
+    smear1_source: Optional[str] = None
+    smear1_result: Optional[str] = None
+    smear1_grade: Optional[str] = None
+    smear2_date: Optional[str] = None
+    smear2_source: Optional[str] = None
+    smear2_result: Optional[str] = None
+    smear2_grade: Optional[str] = None
+    smear3_date: Optional[str] = None
+    smear3_source: Optional[str] = None
+    smear3_result: Optional[str] = None
+    smear3_grade: Optional[str] = None
+
+class MedicationInfo(BaseModel):
+    prescribed: bool = False
+    dosage: Optional[str] = None
+    type: Optional[str] = None
+
+class TreatmentInformation(BaseModel):
+    therapy_initiated_date: Optional[str] = None
+    therapy_interrupted: bool = False
+    interruption_reason: Optional[str] = None
+    medications: Dict[str, MedicationInfo] = {}
+    frequency: Optional[str] = None
+    central_line_inserted: bool = False
+    days_of_medication_supplied: Optional[str] = None
+    patient_agreed_to_dot: bool = False
+    form_filled_by_name: Optional[str] = None
+    form_filled_date: Optional[str] = None
+    responsible_physician_name: Optional[str] = None
+    physician_license_number: Optional[str] = None
+    physician_phone: Optional[str] = None
+
+class PatientInfo(BaseModel):
+    contact_info: PatientContactInfo
+    discharge_info: DischargeInformation
+    follow_up: FollowUpAppointment
+    lab_results: LaboratoryResults
+    treatment_info: TreatmentInformation
 
 class ShelterInfo(BaseModel):
     name: str
