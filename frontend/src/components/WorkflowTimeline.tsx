@@ -20,45 +20,43 @@ import {
   BarChart3,
   FileText,
   Sparkles,
-  Radio
+  Radio,
+  Phone,
+  MapPin,
+  ArrowRight
 } from "lucide-react";
+
+interface AgentLog {
+  id: string;
+  timestamp: string;
+  message: string;
+  type: "info" | "success" | "error" | "transcription";
+  transcription?: {
+    speaker: string;
+    text: string;
+    duration?: string;
+  };
+}
 
 interface Agent {
   id: string;
   name: string;
-  type: "HospitalAgent" | "CoordinatorAgent" | "SocialWorkerAgent" | "ShelterAgent" | "TransportAgent" | "FollowUpCareAgent" | "ResourceAgent" | "PharmacyAgent" | "EligibilityAgent" | "AnalyticsAgent" | "ParserAgent";
+  type: "ParserAgent" | "HospitalAgent" | "CoordinatorAgent" | "SocialWorkerAgent" | "ShelterAgent" | "TransportAgent" | "ResourceAgent" | "PharmacyAgent" | "EligibilityAgent" | "AnalyticsAgent";
   status: "idle" | "working" | "completed" | "error";
   currentTask: string;
   progress: number;
   lastActivity: string;
-  messages: AgentMessage[];
-}
-
-interface AgentMessage {
-  id: string;
-  timestamp: string;
-  from: string;
-  to: string;
-  message: string;
-  type: "request" | "response" | "notification" | "error";
-}
-
-interface WorkflowStep {
-  id: string;
-  name: string;
-  status: "pending" | "in_progress" | "completed" | "failed";
-  description: string;
-  agent: string;
-  duration: string;
-  logs: string[];
+  logs: AgentLog[];
+  connections: string[]; // IDs of agents this agent communicates with
 }
 
 const WorkflowTimeline: React.FC = () => {
   const [agents, setAgents] = useState<Agent[]>([]);
-  const [steps, setSteps] = useState<WorkflowStep[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [caseId, setCaseId] = useState<string>("");
   const [workflowData, setWorkflowData] = useState<any>(null);
+  const [currentPhase, setCurrentPhase] = useState<number>(0); // 0: Parser→Hospital→Coordinator, 1: Shelter+Social, 2: Transport, 3: Others
+  const [globalLogs, setGlobalLogs] = useState<Array<AgentLog & { agentName: string; agentColor: string }>>([]);
 
   useEffect(() => {
     // Get current case ID from localStorage
@@ -68,9 +66,8 @@ const WorkflowTimeline: React.FC = () => {
     }
     
     initializeAgents();
-    initializeSteps();
     
-    // Start polling for real workflow data - only if case has been submitted
+    // Start polling for real workflow data
     const pollInterval = setInterval(() => {
       if (storedCaseId) {
         const isSubmitted = localStorage.getItem(`case_submitted_${storedCaseId}`);
@@ -80,10 +77,8 @@ const WorkflowTimeline: React.FC = () => {
       }
     }, 2000);
     
-    const cleanup = startSimulation();
     return () => {
       clearInterval(pollInterval);
-      cleanup();
     };
   }, []);
 
@@ -93,12 +88,10 @@ const WorkflowTimeline: React.FC = () => {
       if (response.ok) {
         const workflow = await response.json();
         
-        // Update agents based on backend workflow status
         if (workflow) {
           console.log("📊 Workflow data received:", workflow);
           setWorkflowData(workflow);
-          updateAgentsFromBackend(workflow);
-          updateStepsFromBackend(workflow);
+          updateAgentsFromWorkflow(workflow);
         }
       }
     } catch (error) {
@@ -106,55 +99,201 @@ const WorkflowTimeline: React.FC = () => {
     }
   };
 
-  const updateAgentsFromBackend = (workflow: any) => {
+  const initializeAgents = () => {
+    const initialAgents: Agent[] = [
+      {
+        id: "parser",
+        name: "Parser Agent",
+        type: "ParserAgent",
+        status: "idle",
+        currentTask: "Ready to parse discharge documents",
+        progress: 0,
+        lastActivity: "Waiting for document upload",
+        logs: [],
+        connections: ["hospital"]
+      },
+      {
+        id: "hospital",
+        name: "Hospital Agent",
+        type: "HospitalAgent",
+        status: "idle",
+        currentTask: "Awaiting discharge request",
+        progress: 0,
+        lastActivity: "Waiting",
+        logs: [],
+        connections: ["coordinator"]
+      },
+      {
+        id: "coordinator",
+        name: "Coordinator Agent",
+        type: "CoordinatorAgent",
+        status: "idle",
+        currentTask: "Ready to orchestrate workflow",
+        progress: 0,
+        lastActivity: "Waiting",
+        logs: [],
+        connections: ["shelter", "social", "transport", "resource", "pharmacy", "eligibility"]
+      },
+      {
+        id: "shelter",
+        name: "Shelter Agent",
+        type: "ShelterAgent",
+        status: "idle",
+        currentTask: "Ready to find shelter",
+        progress: 0,
+        lastActivity: "Waiting",
+        logs: [],
+        connections: ["coordinator"]
+      },
+      {
+        id: "social",
+        name: "Social Worker Agent",
+        type: "SocialWorkerAgent",
+        status: "idle",
+        currentTask: "Ready to assign case manager",
+        progress: 0,
+        lastActivity: "Waiting",
+        logs: [],
+        connections: ["coordinator"]
+      },
+      {
+        id: "transport",
+        name: "Transport Agent",
+        type: "TransportAgent",
+        status: "idle",
+        currentTask: "Ready to arrange transport",
+        progress: 0,
+        lastActivity: "Waiting",
+        logs: [],
+        connections: ["coordinator"]
+      },
+      {
+        id: "resource",
+        name: "Resource Agent",
+        type: "ResourceAgent",
+        status: "idle",
+        currentTask: "Ready to coordinate resources",
+        progress: 0,
+        lastActivity: "Waiting",
+        logs: [],
+        connections: ["coordinator"]
+      },
+      {
+        id: "pharmacy",
+        name: "Pharmacy Agent",
+        type: "PharmacyAgent",
+        status: "idle",
+        currentTask: "Ready to coordinate medications",
+        progress: 0,
+        lastActivity: "Waiting",
+        logs: [],
+        connections: ["coordinator"]
+      },
+      {
+        id: "eligibility",
+        name: "Eligibility Agent",
+        type: "EligibilityAgent",
+        status: "idle",
+        currentTask: "Ready to verify benefits",
+        progress: 0,
+        lastActivity: "Waiting",
+        logs: [],
+        connections: ["coordinator"]
+      },
+      {
+        id: "analytics",
+        name: "Analytics Agent",
+        type: "AnalyticsAgent",
+        status: "idle",
+        currentTask: "Ready to collect metrics",
+        progress: 0,
+        lastActivity: "Waiting",
+        logs: [],
+        connections: []
+      }
+    ];
+    setAgents(initialAgents);
+  };
+
+  const updateAgentsFromWorkflow = (workflow: any) => {
     setAgents(prevAgents => {
       const updatedAgents = [...prevAgents];
+      const newGlobalLogs: Array<AgentLog & { agentName: string; agentColor: string }> = [];
       
-      // Update based on workflow timeline
       workflow.timeline?.forEach((timelineItem: any) => {
         const agentId = getAgentIdFromStep(timelineItem.step);
         const agentIndex = updatedAgents.findIndex(a => a.id === agentId);
         
         if (agentIndex !== -1) {
+          const agent = updatedAgents[agentIndex];
           const status = timelineItem.status === "completed" ? "completed" : 
                         timelineItem.status === "in_progress" ? "working" : "idle";
+          
+          const colors = getAgentColor(agent.type, status as any);
+          
+          // Convert logs array to AgentLog format
+          const logs: AgentLog[] = (timelineItem.logs || []).map((log: string, idx: number) => {
+            const isTranscription = log.includes("🎙️ TRANSCRIPTION");
+            const logEntry: AgentLog = {
+              id: `${agentId}-log-${idx}-${Date.now()}`,
+              timestamp: timelineItem.timestamp || new Date().toISOString(),
+              message: log,
+              type: isTranscription ? "transcription" : log.includes("✅") ? "success" : log.includes("❌") ? "error" : "info"
+            };
+            
+            // Parse transcription if present
+            if (isTranscription) {
+              const transcriptionMatch = log.match(/🎙️ TRANSCRIPTION - ([^:]+): '([^']+)'/);
+              if (transcriptionMatch) {
+                logEntry.transcription = {
+                  speaker: transcriptionMatch[1],
+                  text: transcriptionMatch[2]
+                };
+              }
+            }
+            
+            // Add to global logs
+            newGlobalLogs.push({
+              ...logEntry,
+              agentName: agent.name,
+              agentColor: colors.border
+            });
+            
+            return logEntry;
+          });
           
           updatedAgents[agentIndex] = {
             ...updatedAgents[agentIndex],
             status: status as any,
             currentTask: timelineItem.description || updatedAgents[agentIndex].currentTask,
             progress: status === "completed" ? 100 : status === "working" ? 65 : 0,
-            lastActivity: timelineItem.timestamp ? new Date(timelineItem.timestamp).toLocaleTimeString() : "Just now"
+            lastActivity: timelineItem.timestamp ? new Date(timelineItem.timestamp).toLocaleTimeString() : "Just now",
+            logs: logs
           };
         }
       });
+      
+      // Update global logs
+      if (newGlobalLogs.length > 0) {
+        setGlobalLogs(prev => {
+          // Merge and deduplicate logs
+          const combined = [...prev, ...newGlobalLogs];
+          const uniqueLogs = Array.from(new Map(combined.map(log => [log.id, log])).values());
+          // Sort by timestamp (newest first)
+          return uniqueLogs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        });
+      }
       
       return updatedAgents;
     });
   };
 
-  const updateStepsFromBackend = (workflow: any) => {
-    if (!workflow.timeline || workflow.timeline.length === 0) return;
-    
-    setSteps(prevSteps => {
-      const backendSteps = workflow.timeline.map((item: any, index: number) => ({
-        id: `step-${index}`,
-        name: item.step.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
-        status: item.status === "completed" ? "completed" as const : 
-                item.status === "in_progress" ? "in_progress" as const : 
-                item.status === "failed" ? "failed" as const : "pending" as const,
-        description: item.description || "",
-        agent: getAgentTypeFromStep(item.step),
-        duration: calculateDuration(item.timestamp),
-        logs: item.logs || [item.description]
-      }));
-      
-      return backendSteps.length > 0 ? backendSteps : prevSteps;
-    });
-  };
-
   const getAgentIdFromStep = (step: string): string => {
     const mapping: Record<string, string> = {
+      "discharge_initiated": "hospital",
+      "parser_processing": "parser",
+      "hospital_validation": "hospital",
+      "coordinator_initiated": "coordinator",
       "intake_received": "hospital",
       "coordinator_notified": "coordinator",
       "shelter_search": "shelter",
@@ -170,308 +309,15 @@ const WorkflowTimeline: React.FC = () => {
     return mapping[step] || "coordinator";
   };
 
-  const getAgentTypeFromStep = (step: string): string => {
-    const mapping: Record<string, string> = {
-      "intake_received": "HospitalAgent",
-      "coordinator_notified": "CoordinatorAgent",
-      "shelter_search": "ShelterAgent",
-      "shelter_confirmed": "ShelterAgent",
-      "transport_requested": "TransportAgent",
-      "transport_scheduled": "TransportAgent",
-      "social_worker_assigned": "SocialWorkerAgent",
-      "resources_confirmed": "ResourceAgent",
-      "pharmacy_notified": "PharmacyAgent",
-      "eligibility_checked": "EligibilityAgent",
-      "workflow_complete": "CoordinatorAgent"
-    };
-    return mapping[step] || "CoordinatorAgent";
-  };
-
-  const calculateDuration = (timestamp: string): string => {
-    if (!timestamp) return "0 min";
-    const now = new Date();
-    const then = new Date(timestamp);
-    const diffMs = now.getTime() - then.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    return diffMins < 1 ? "< 1 min" : `${diffMins} min`;
-  };
-
-  const initializeAgents = () => {
-    const initialAgents: Agent[] = [
-      {
-        id: "parser",
-        name: "Parser Agent",
-        type: "ParserAgent",
-        status: "idle",
-        currentTask: "Ready to parse discharge documents",
-        progress: 0,
-        lastActivity: "Waiting for document upload",
-        messages: []
-      },
-      {
-        id: "hospital",
-        name: "Hospital Agent",
-        type: "HospitalAgent",
-        status: "completed",
-        currentTask: "Discharge details submitted",
-        progress: 100,
-        lastActivity: "2 minutes ago",
-        messages: [
-          {
-            id: "1",
-            timestamp: "10:00 AM",
-            from: "HospitalAgent",
-            to: "CoordinatorAgent",
-            message: "Patient John Doe ready for discharge. Medical condition: stable, accessibility needs: wheelchair access",
-            type: "request"
-          }
-        ]
-      },
-      {
-        id: "coordinator",
-        name: "Coordinator Agent",
-        type: "CoordinatorAgent",
-        status: "working",
-        currentTask: "Querying Bright Data for shelter availability",
-        progress: 65,
-        lastActivity: "1 minute ago",
-        messages: [
-          {
-            id: "2",
-            timestamp: "10:01 AM",
-            from: "CoordinatorAgent",
-            to: "BrightData",
-            message: "Querying SF shelter database for wheelchair accessible beds",
-            type: "request"
-          },
-          {
-            id: "3",
-            timestamp: "10:02 AM",
-            from: "BrightData",
-            to: "CoordinatorAgent",
-            message: "Found 3 suitable shelters: Mission Center (5 beds), Hamilton Center (2 beds), St. Anthony's (8 beds)",
-            type: "response"
-          }
-        ]
-      },
-      {
-        id: "shelter",
-        name: "Shelter Agent",
-        type: "ShelterAgent",
-        status: "working",
-        currentTask: "Confirming bed availability via Vapi call",
-        progress: 40,
-        lastActivity: "30 seconds ago",
-        messages: [
-          {
-            id: "4",
-            timestamp: "10:03 AM",
-            from: "CoordinatorAgent",
-            to: "ShelterAgent",
-            message: "Please confirm availability for Mission Neighborhood Resource Center",
-            type: "request"
-          },
-          {
-            id: "5",
-            timestamp: "10:04 AM",
-            from: "ShelterAgent",
-            to: "Vapi",
-            message: "Initiating voice call to Mission Center to confirm bed availability",
-            type: "notification"
-          }
-        ]
-      },
-      {
-        id: "social",
-        name: "Social Worker Agent",
-        type: "SocialWorkerAgent",
-        status: "idle",
-        currentTask: "Awaiting shelter confirmation",
-        progress: 0,
-        lastActivity: "Waiting",
-        messages: []
-      },
-      {
-        id: "transport",
-        name: "Transport Agent",
-        type: "TransportAgent",
-        status: "idle",
-        currentTask: "Awaiting assignment",
-        progress: 0,
-        lastActivity: "Waiting",
-        messages: []
-      },
-      {
-        id: "resource",
-        name: "Resource Agent",
-        type: "ResourceAgent",
-        status: "idle",
-        currentTask: "Ready to coordinate food, hygiene, clothing",
-        progress: 0,
-        lastActivity: "Waiting",
-        messages: []
-      },
-      {
-        id: "pharmacy",
-        name: "Pharmacy Agent",
-        type: "PharmacyAgent",
-        status: "idle",
-        currentTask: "Ready to ensure medication continuity",
-        progress: 0,
-        lastActivity: "Waiting",
-        messages: []
-      },
-      {
-        id: "eligibility",
-        name: "Eligibility Agent",
-        type: "EligibilityAgent",
-        status: "idle",
-        currentTask: "Ready to verify benefit eligibility",
-        progress: 0,
-        lastActivity: "Waiting",
-        messages: []
-      },
-      {
-        id: "analytics",
-        name: "Analytics Agent",
-        type: "AnalyticsAgent",
-        status: "working",
-        currentTask: "Collecting system metrics",
-        progress: 15,
-        lastActivity: "Just now",
-        messages: [
-          {
-            id: "a1",
-            timestamp: "10:00 AM",
-            from: "AnalyticsAgent",
-            to: "System",
-            message: "Recording workflow metrics for case #12345",
-            type: "notification"
-          }
-        ]
-      }
-    ];
-    setAgents(initialAgents);
-  };
-
-  const initializeSteps = () => {
-    const initialSteps: WorkflowStep[] = [
-      {
-        id: "1",
-        name: "Discharge Intake",
-        status: "pending",
-        description: "Waiting for discharge form submission",
-        agent: "HospitalAgent",
-        duration: "0 min",
-        logs: ["Ready to receive discharge request"]
-      },
-      {
-        id: "2",
-        name: "Coordinator Notified",
-        status: "pending",
-        description: "Coordinator Agent will orchestrate all downstream agents",
-        agent: "CoordinatorAgent",
-        duration: "0 min",
-        logs: []
-      },
-      {
-        id: "3",
-        name: "Shelter Search",
-        status: "pending",
-        description: "Querying Bright Data for real-time shelter availability",
-        agent: "ShelterAgent",
-        duration: "0 min",
-        logs: []
-      },
-      {
-        id: "4",
-        name: "Transport Coordination",
-        status: "pending",
-        description: "Arranging wheelchair-accessible transport",
-        agent: "TransportAgent",
-        duration: "0 min",
-        logs: []
-      },
-      {
-        id: "5",
-        name: "Social Worker Assignment",
-        status: "pending",
-        description: "Connecting patient with appropriate case manager",
-        agent: "SocialWorkerAgent",
-        duration: "0 min",
-        logs: []
-      },
-      {
-        id: "6",
-        name: "Resource Coordination",
-        status: "pending",
-        description: "Arranging meals, clothing, hygiene items",
-        agent: "ResourceAgent",
-        duration: "0 min",
-        logs: []
-      }
-    ];
-    setSteps(initialSteps);
-  };
-
-  const startSimulation = () => {
-    const interval = setInterval(() => {
-      setAgents(prevAgents => 
-        prevAgents.map(agent => {
-          if (agent.status === "working" && agent.progress < 100) {
-            const newProgress = Math.min(agent.progress + Math.random() * 10, 100);
-            const newStatus = newProgress >= 100 ? "completed" : "working";
-            
-            return {
-              ...agent,
-              progress: newProgress,
-              status: newStatus,
-              lastActivity: "Just now"
-            };
-          }
-          return agent;
-        })
-      );
-
-      setSteps(prevSteps =>
-        prevSteps.map((step, index) => {
-          if (step.status === "in_progress") {
-            const currentAgent = agents.find(a => a.type === step.agent);
-            if (currentAgent?.status === "completed") {
-              return {
-                ...step,
-                status: "completed",
-                logs: [...step.logs, "✅ Task completed successfully"]
-              };
-            }
-          } else if (step.status === "pending" && index > 0) {
-            const prevStep = prevSteps[index - 1];
-            if (prevStep.status === "completed") {
-              return {
-                ...step,
-                status: "in_progress",
-                logs: ["🔄 Task initiated"]
-              };
-            }
-          }
-          return step;
-        })
-      );
-    }, 2000);
-
-    return () => clearInterval(interval);
-  };
-
   const getAgentIcon = (type: Agent["type"]) => {
     const iconProps = { className: "w-5 h-5" };
     switch (type) {
       case "ParserAgent": return <FileText {...iconProps} />;
-      case "HospitalAgent": return <Home {...iconProps} />;
+      case "HospitalAgent": return <Activity {...iconProps} />;
       case "CoordinatorAgent": return <Network {...iconProps} />;
       case "SocialWorkerAgent": return <Users {...iconProps} />;
       case "ShelterAgent": return <Home {...iconProps} />;
       case "TransportAgent": return <Truck {...iconProps} />;
-      case "FollowUpCareAgent": return <MessageSquare {...iconProps} />;
       case "ResourceAgent": return <ShoppingBag {...iconProps} />;
       case "PharmacyAgent": return <Pill {...iconProps} />;
       case "EligibilityAgent": return <FileCheck {...iconProps} />;
@@ -481,7 +327,6 @@ const WorkflowTimeline: React.FC = () => {
   };
 
   const getAgentColor = (type: Agent["type"], status: Agent["status"]) => {
-    // Each agent type gets its own color scheme
     const agentColors: Record<Agent["type"], { bg: string; border: string; text: string; glow: string }> = {
       "ParserAgent": { 
         bg: "rgba(139, 92, 246, 0.1)", 
@@ -519,12 +364,6 @@ const WorkflowTimeline: React.FC = () => {
         text: "#1E40AF",
         glow: "rgba(59, 130, 246, 0.2)"
       },
-      "FollowUpCareAgent": { 
-        bg: "rgba(236, 72, 153, 0.1)", 
-        border: "#EC4899", 
-        text: "#9D174D",
-        glow: "rgba(236, 72, 153, 0.2)"
-      },
       "ResourceAgent": { 
         bg: "rgba(232, 168, 124, 0.1)", 
         border: "#E8A87C", 
@@ -553,7 +392,6 @@ const WorkflowTimeline: React.FC = () => {
 
     const baseColors = agentColors[type];
     
-    // Adjust opacity for status
     if (status === "idle") {
       return {
         ...baseColors,
@@ -573,14 +411,33 @@ const WorkflowTimeline: React.FC = () => {
     return baseColors;
   };
 
-  const getStepStatusIcon = (status: WorkflowStep["status"]) => {
-    switch (status) {
-      case "completed": return <CheckCircle className="text-[#2D9F7E]" size={24} />;
-      case "in_progress": return <Clock className="text-[#E8A87C]" size={24} />;
-      case "failed": return <XCircle className="text-[#C85C5C]" size={24} />;
-      default: return <Clock className="text-[#6B7575] opacity-40" size={24} />;
+  // Define agent phases for sequential execution
+  const agentPhases = [
+    {
+      id: 0,
+      name: "Initial Processing",
+      agents: ["parser", "hospital", "coordinator"],
+      description: "Document parsing and workflow initialization"
+    },
+    {
+      id: 1,
+      name: "Shelter & Social Services",
+      agents: ["shelter", "social"],
+      description: "Finding shelter and assigning case manager"
+    },
+    {
+      id: 2,
+      name: "Transportation",
+      agents: ["transport"],
+      description: "Arranging wheelchair-accessible transport"
+    },
+    {
+      id: 3,
+      name: "Additional Services",
+      agents: ["resource", "pharmacy", "eligibility", "analytics"],
+      description: "Resource coordination and benefit verification"
     }
-  };
+  ];
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -604,7 +461,7 @@ const WorkflowTimeline: React.FC = () => {
         </p>
       </motion.div>
 
-      {/* Active Case Banner or No Workflow Message */}
+      {/* Active Case Banner */}
       {workflowData && workflowData.patient ? (
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -676,49 +533,276 @@ const WorkflowTimeline: React.FC = () => {
             No Active Workflow
           </h3>
           <p className="text-sm" style={{ color: '#6B7575' }}>
-            Submit a discharge form on the <strong>Discharge Intake</strong> tab to start agent coordination
+            Submit a discharge form on the <strong>Patient Intake</strong> tab to start agent coordination
           </p>
         </motion.div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Agent Status Panel */}
-        <div className="lg:col-span-1">
-          <div 
-            className="rounded-3xl p-6 sticky top-24"
+      {/* Global Activity Log - Always Visible */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-8 rounded-3xl p-6"
+        style={{
+          background: 'rgba(255, 255, 255, 0.95)',
+          border: '2px solid #0D7377',
+          boxShadow: '0 8px 32px rgba(13, 115, 119, 0.12)'
+        }}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-3">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+              className="p-2 rounded-xl"
+              style={{ background: 'linear-gradient(135deg, #0D7377, #14919B)' }}
+            >
+              <Activity className="w-5 h-5 text-white" />
+            </motion.div>
+            <div>
+              <h3 
+                className="text-xl font-semibold"
+                style={{ fontFamily: 'Crimson Pro, serif', color: '#1A1D1E' }}
+              >
+                Live Activity Feed
+              </h3>
+              <p className="text-sm" style={{ color: '#6B7575' }}>
+                Real-time logs from all agents
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <motion.div
+              animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="w-2 h-2 rounded-full bg-[#2D9F7E]"
+            />
+            <span className="text-xs font-medium" style={{ color: '#2D9F7E' }}>
+              Live
+            </span>
+          </div>
+        </div>
+
+        {/* Log entries with animations */}
+        <div 
+          className="space-y-2 max-h-96 overflow-y-auto pr-2"
+          style={{
+            scrollbarWidth: 'thin',
+            scrollbarColor: '#0D7377 rgba(224, 213, 199, 0.3)'
+          }}
+        >
+          {globalLogs.length === 0 ? (
+            <div className="text-center py-12">
+              <Radio className="w-16 h-16 mx-auto mb-4 text-[#6B7575] opacity-20" />
+              <p className="text-sm" style={{ color: '#6B7575' }}>
+                Waiting for agent activity...
+              </p>
+              <p className="text-xs mt-2" style={{ color: '#6B7575' }}>
+                Submit a discharge form to see agents in action
+              </p>
+            </div>
+          ) : (
+            <AnimatePresence mode="popLayout">
+              {globalLogs.map((log, index) => (
+                <motion.div
+                  key={log.id}
+                  initial={{ opacity: 0, x: -20, scale: 0.95 }}
+                  animate={{ opacity: 1, x: 0, scale: 1 }}
+                  exit={{ opacity: 0, x: 20, scale: 0.95 }}
+                  transition={{ 
+                    duration: 0.4,
+                    type: "spring",
+                    stiffness: 200,
+                    damping: 20
+                  }}
+                  className="rounded-xl p-4 transition-all duration-300 hover:shadow-md"
+                  style={{
+                    background: log.type === "transcription" 
+                      ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(139, 92, 246, 0.03))'
+                      : log.type === "success"
+                      ? 'linear-gradient(135deg, rgba(45, 159, 126, 0.08), rgba(45, 159, 126, 0.03))'
+                      : log.type === "error"
+                      ? 'linear-gradient(135deg, rgba(200, 92, 92, 0.08), rgba(200, 92, 92, 0.03))'
+                      : 'rgba(13, 115, 119, 0.03)',
+                    border: `1px solid ${
+                      log.type === "transcription" ? '#8B5CF6' :
+                      log.type === "success" ? '#2D9F7E' :
+                      log.type === "error" ? '#C85C5C' :
+                      '#E0D5C7'
+                    }`,
+                    borderLeftWidth: '4px'
+                  }}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center space-x-2 flex-1">
+                      {/* Agent badge */}
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 0.1 }}
+                        className="px-2 py-1 rounded-lg text-xs font-semibold"
+                        style={{ 
+                          background: `${log.agentColor}20`,
+                          color: log.agentColor
+                        }}
+                      >
+                        {log.agentName}
+                      </motion.div>
+                      
+                      {/* Type indicator */}
+                      {log.type === "transcription" && (
+                        <motion.div
+                          initial={{ scale: 0, rotate: -180 }}
+                          animate={{ scale: 1, rotate: 0 }}
+                          transition={{ delay: 0.2 }}
+                        >
+                          <Phone className="w-4 h-4" style={{ color: '#8B5CF6' }} />
+                        </motion.div>
+                      )}
+                      {log.type === "success" && (
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ delay: 0.2, type: "spring" }}
+                        >
+                          <CheckCircle className="w-4 h-4" style={{ color: '#2D9F7E' }} />
+                        </motion.div>
+                      )}
+                      {log.type === "error" && (
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: [1, 1.2, 1] }}
+                          transition={{ delay: 0.2 }}
+                        >
+                          <XCircle className="w-4 h-4" style={{ color: '#C85C5C' }} />
+                        </motion.div>
+                      )}
+                    </div>
+                    
+                    <motion.span 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.3 }}
+                      className="text-xs font-medium"
+                      style={{ color: '#6B7575' }}
+                    >
+                      {new Date(log.timestamp).toLocaleTimeString()}
+                    </motion.span>
+                  </div>
+                  
+                  {/* Log content with staggered animation */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                  >
+                    {log.transcription ? (
+                      <div className="space-y-2">
+                        <div className="flex items-start space-x-2">
+                          <Users className="w-4 h-4 mt-0.5" style={{ color: '#8B5CF6' }} />
+                          <div className="flex-1">
+                            <span className="text-sm font-semibold" style={{ color: '#1A1D1E' }}>
+                              {log.transcription.speaker}
+                            </span>
+                            {log.transcription.duration && (
+                              <span className="text-xs ml-2" style={{ color: '#6B7575' }}>
+                                ({log.transcription.duration})
+                              </span>
+                            )}
+                            <motion.p 
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              transition={{ delay: 0.4 }}
+                              className="text-sm mt-1 italic"
+                              style={{ color: '#1A1D1E' }}
+                            >
+                              "{log.transcription.text}"
+                            </motion.p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm" style={{ color: '#1A1D1E' }}>
+                        {log.message}
+                      </p>
+                    )}
+                  </motion.div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          )}
+        </div>
+
+        {globalLogs.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className="mt-4 pt-4 border-t border-gray-200 text-center"
+          >
+            <p className="text-xs" style={{ color: '#6B7575' }}>
+              💡 Click on any agent pill below to view individual agent logs
+            </p>
+          </motion.div>
+        )}
+      </motion.div>
+
+      {/* Agent Workflow Visualization */}
+      <div className="grid grid-cols-1 gap-8">
+        {/* Sequential Agent Phases */}
+        {agentPhases.map((phase, phaseIndex) => (
+          <motion.div
+            key={phase.id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: phaseIndex * 0.1 }}
+            className="rounded-3xl p-6"
             style={{
               background: 'rgba(255, 255, 255, 0.9)',
               border: '1px solid #E0D5C7',
               boxShadow: '0 4px 16px rgba(13, 115, 119, 0.08)'
             }}
           >
-            <div className="flex items-center space-x-2 mb-6">
-              <Radio className="w-5 h-5 text-[#0D7377]" />
+            {/* Phase Header */}
+            <div className="mb-6">
+              <div className="flex items-center space-x-3 mb-2">
+                <div 
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold"
+                  style={{ background: `linear-gradient(135deg, #0D7377, #14919B)` }}
+                >
+                  {phaseIndex + 1}
+                </div>
+                <div>
               <h3 
                 className="text-xl font-semibold"
                 style={{ fontFamily: 'Crimson Pro, serif', color: '#1A1D1E' }}
               >
-                Active Agents
+                    {phase.name}
               </h3>
+                  <p className="text-sm" style={{ color: '#6B7575' }}>
+                    {phase.description}
+                  </p>
+                </div>
+              </div>
             </div>
             
-            <div className="space-y-3 max-h-[calc(100vh-300px)] overflow-y-auto pr-2">
-              <AnimatePresence>
-                {agents.map((agent, index) => {
+            {/* Agents in this phase */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {agents.filter(agent => phase.agents.includes(agent.id)).map((agent, agentIndex) => {
                   const colors = getAgentColor(agent.type, agent.status);
                   
                   return (
                     <motion.div
                       key={agent.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      whileHover={{ scale: 1.02, x: 4 }}
-                      className="rounded-2xl p-4 cursor-pointer transition-all duration-300"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: agentIndex * 0.05 }}
+                    whileHover={{ scale: 1.02 }}
+                    className="rounded-2xl p-5 cursor-pointer transition-all duration-300"
                       style={{
                         background: colors.bg,
-                        border: `1.5px solid ${colors.border}`,
-                        boxShadow: agent.status === "working" ? `0 4px 16px ${colors.glow}` : 'none'
+                      border: `2px solid ${colors.border}`,
+                      boxShadow: agent.status === "working" ? `0 4px 16px ${colors.glow}` : '0 2px 8px rgba(0, 0, 0, 0.05)'
                       }}
                       onClick={() => setSelectedAgent(agent)}
                     >
@@ -731,9 +815,7 @@ const WorkflowTimeline: React.FC = () => {
                               color: colors.border
                             }}
                           >
-                            <div style={{ color: colors.border }}>
                               {getAgentIcon(agent.type)}
-                            </div>
                           </div>
                           <div>
                             <h4 
@@ -757,7 +839,7 @@ const WorkflowTimeline: React.FC = () => {
                           </motion.div>
                         )}
                         {agent.status === "completed" && (
-                          <CheckCircle className="w-4 h-4" style={{ color: colors.border }} />
+                        <CheckCircle className="w-5 h-5" style={{ color: colors.border }} />
                         )}
                       </div>
                       
@@ -782,147 +864,68 @@ const WorkflowTimeline: React.FC = () => {
                         </div>
                       )}
                       
-                      <p className="text-xs mt-2" style={{ color: '#6B7575' }}>
+                    <p className="text-xs mt-3" style={{ color: '#6B7575' }}>
                         {agent.lastActivity}
                       </p>
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
-            </div>
-          </div>
-        </div>
 
-        {/* Workflow Timeline */}
-        <div className="lg:col-span-2">
-          <div 
-            className="rounded-3xl p-8"
+                    {/* Agent connections */}
+                    {agent.connections.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        <p className="text-xs mb-2" style={{ color: '#6B7575' }}>Connects to:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {agent.connections.slice(0, 3).map(connId => {
+                            const connAgent = agents.find(a => a.id === connId);
+                            return connAgent ? (
+                              <span 
+                                key={connId}
+                                className="px-2 py-1 rounded-lg text-xs"
             style={{
-              background: 'rgba(255, 255, 255, 0.9)',
-              border: '1px solid #E0D5C7',
-              boxShadow: '0 4px 16px rgba(13, 115, 119, 0.08)'
-            }}
-          >
-            <div className="flex items-center space-x-2 mb-8">
-              <Activity className="w-5 h-5 text-[#D17A5C]" />
-              <h3 
-                className="text-xl font-semibold"
-                style={{ fontFamily: 'Crimson Pro, serif', color: '#1A1D1E' }}
-              >
-                Workflow Progress
-              </h3>
+                                  background: 'rgba(255, 255, 255, 0.6)',
+                                  color: '#6B7575'
+                                }}
+                              >
+                                {connAgent.name.replace(' Agent', '')}
+                              </span>
+                            ) : null;
+                          })}
+                          {agent.connections.length > 3 && (
+                            <span className="text-xs" style={{ color: '#6B7575' }}>
+                              +{agent.connections.length - 3} more
+                            </span>
+                          )}
             </div>
-
-            <div className="relative pl-10">
-              {/* Timeline line */}
-              <div 
-                className="absolute left-3 top-0 bottom-0 w-0.5"
-                style={{ background: 'linear-gradient(180deg, #0D7377, #E8A87C)' }}
-              />
-
-              {steps.map((step, index) => (
-                <motion.div
-                  key={step.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1, duration: 0.4 }}
-                  className="mb-8 last:mb-0"
-                >
-                  {/* Timeline node */}
-                  <div className="absolute -left-1">
-                    <motion.div
-                      className="p-1 rounded-full"
-                      style={{ 
-                        background: 'white',
-                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
-                      }}
-                      animate={step.status === "in_progress" ? {
-                        scale: [1, 1.2, 1],
-                        boxShadow: [
-                          '0 2px 8px rgba(232, 168, 124, 0.3)',
-                          '0 4px 16px rgba(232, 168, 124, 0.6)',
-                          '0 2px 8px rgba(232, 168, 124, 0.3)'
-                        ]
-                      } : {}}
-                      transition={{ duration: 2, repeat: Infinity }}
-                    >
-                      {getStepStatusIcon(step.status)}
+                      </div>
+                    )}
                     </motion.div>
+                );
+              })}
                   </div>
 
-                  {/* Step content */}
-                  <div className="ml-6">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <h4 
-                          className="text-lg font-semibold mb-1"
-                          style={{ fontFamily: 'Crimson Pro, serif', color: '#1A1D1E' }}
-                        >
-                          {step.name}
-                        </h4>
-                        <p className="text-sm mb-2" style={{ color: '#6B7575' }}>
-                          {step.description}
-                        </p>
-                        <div className="flex items-center space-x-4 text-xs" style={{ color: '#6B7575' }}>
-                          <span>Agent: <span className="font-medium">{step.agent}</span></span>
-                          <span>Duration: <span className="font-medium">{step.duration}</span></span>
-                        </div>
-                      </div>
-                      
-                      <div
-                        className="px-3 py-1 rounded-lg text-xs font-medium whitespace-nowrap"
-                        style={{
-                          background: step.status === "completed" ? "rgba(45, 159, 126, 0.1)" : step.status === "in_progress" ? "rgba(232, 168, 124, 0.1)" : "rgba(224, 213, 199, 0.3)",
-                          color: step.status === "completed" ? "#1A5F4A" : step.status === "in_progress" ? "#8B5A3C" : "#6B7575",
-                          border: `1px solid ${step.status === "completed" ? "#2D9F7E" : step.status === "in_progress" ? "#E8A87C" : "#E0D5C7"}`
-                        }}
-                      >
-                        {step.status.replace('_', ' ')}
-                      </div>
-                    </div>
-
-                    {/* Activity logs */}
-                    {step.logs && step.logs.length > 0 && (
+            {/* Phase Connector Arrow */}
+            {phaseIndex < agentPhases.length - 1 && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                className="flex justify-center mt-6"
+              >
                       <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        className="mt-4 rounded-xl p-4"
-                        style={{
-                          background: 'rgba(13, 115, 119, 0.03)',
-                          border: '1px solid #E0D5C7'
-                        }}
-                      >
-                        <h5 className="text-xs font-semibold mb-2" style={{ color: '#6B7575' }}>
-                          Activity Log:
-                        </h5>
-                        <div className="space-y-1">
-                          <AnimatePresence>
-                            {step.logs.map((log, logIndex) => (
-                              <motion.p
-                                key={logIndex}
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: logIndex * 0.05 }}
-                                className="text-xs font-mono"
-                                style={{ color: '#6B7575' }}
-                              >
-                                {log}
-                              </motion.p>
-                            ))}
-                          </AnimatePresence>
-                        </div>
+                  animate={{ y: [0, 5, 0] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                >
+                  <ArrowRight 
+                    className="w-8 h-8 transform rotate-90"
+                    style={{ color: '#0D7377', opacity: 0.3 }}
+                  />
+                </motion.div>
                       </motion.div>
                     )}
-                  </div>
                 </motion.div>
               ))}
-            </div>
-          </div>
-        </div>
       </div>
 
-      {/* Selected Agent Messages */}
-      {selectedAgent && selectedAgent.messages.length > 0 && (
+      {/* Agent Detail Logs Panel */}
+      {selectedAgent && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -933,40 +936,118 @@ const WorkflowTimeline: React.FC = () => {
             boxShadow: '0 4px 16px rgba(13, 115, 119, 0.08)'
           }}
         >
-          <h3 
-            className="text-xl font-semibold mb-6"
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <div 
+                className="p-3 rounded-xl"
+                style={{ 
+                  background: getAgentColor(selectedAgent.type, selectedAgent.status).bg,
+                  color: getAgentColor(selectedAgent.type, selectedAgent.status).border
+                }}
+              >
+                {getAgentIcon(selectedAgent.type)}
+              </div>
+              <div>
+                <h3 
+                  className="text-2xl font-semibold"
             style={{ fontFamily: 'Crimson Pro, serif', color: '#1A1D1E' }}
           >
-            {selectedAgent.name} - Communication Log
+                  {selectedAgent.name}
           </h3>
-          <div className="space-y-3">
-            <AnimatePresence>
-              {selectedAgent.messages.map((message, index) => (
+                <p className="text-sm" style={{ color: '#6B7575' }}>
+                  {selectedAgent.currentTask}
+                </p>
+              </div>
+            </div>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setSelectedAgent(null)}
+              className="px-4 py-2 rounded-lg text-sm font-medium"
+              style={{
+                background: 'rgba(224, 213, 199, 0.5)',
+                color: '#1A1D1E'
+              }}
+            >
+              Close
+            </motion.button>
+          </div>
+
+          {/* Logs Display */}
+          <div className="space-y-3 max-h-96 overflow-y-auto">
+            {selectedAgent.logs.length === 0 ? (
+              <div className="text-center py-8">
+                <Radio className="w-12 h-12 mx-auto mb-3 text-[#6B7575] opacity-30" />
+                <p className="text-sm" style={{ color: '#6B7575' }}>
+                  No activity logs yet
+                </p>
+              </div>
+            ) : (
+              selectedAgent.logs.map((log, index) => (
                 <motion.div
-                  key={message.id}
+                  key={log.id}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.05 }}
-                  className="rounded-2xl p-4"
+                  className="rounded-xl p-4"
                   style={{
-                    background: 'rgba(13, 115, 119, 0.03)',
-                    border: '1px solid #E0D5C7'
+                    background: log.type === "transcription" ? 'rgba(139, 92, 246, 0.05)' : 'rgba(13, 115, 119, 0.03)',
+                    border: `1px solid ${log.type === "transcription" ? '#8B5CF6' : '#E0D5C7'}`
                   }}
                 >
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="text-sm font-semibold" style={{ color: '#0D7377' }}>
-                      {message.from} → {message.to}
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center space-x-2">
+                      {log.type === "transcription" && (
+                        <Phone className="w-4 h-4" style={{ color: '#8B5CF6' }} />
+                      )}
+                      {log.type === "success" && (
+                        <CheckCircle className="w-4 h-4" style={{ color: '#2D9F7E' }} />
+                      )}
+                      {log.type === "error" && (
+                        <XCircle className="w-4 h-4" style={{ color: '#C85C5C' }} />
+                      )}
+                      <span className="text-xs font-semibold" style={{ color: '#6B7575' }}>
+                        {new Date(log.timestamp).toLocaleTimeString()}
                     </span>
-                    <span className="text-xs" style={{ color: '#6B7575' }}>
-                      {message.timestamp}
-                    </span>
+                    </div>
+                    {log.transcription && (
+                      <span 
+                        className="text-xs px-2 py-1 rounded-lg"
+                        style={{ 
+                          background: 'rgba(139, 92, 246, 0.1)',
+                          color: '#8B5CF6'
+                        }}
+                      >
+                        VAPI Transcription
+                      </span>
+                    )}
                   </div>
+                  
+                  {log.transcription ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <Users className="w-4 h-4" style={{ color: '#8B5CF6' }} />
+                        <span className="text-sm font-medium" style={{ color: '#1A1D1E' }}>
+                          {log.transcription.speaker}
+                        </span>
+                        {log.transcription.duration && (
+                    <span className="text-xs" style={{ color: '#6B7575' }}>
+                            ({log.transcription.duration})
+                    </span>
+                        )}
+                  </div>
+                      <p className="text-sm pl-6" style={{ color: '#1A1D1E' }}>
+                        "{log.transcription.text}"
+                      </p>
+                    </div>
+                  ) : (
                   <p className="text-sm" style={{ color: '#1A1D1E' }}>
-                    {message.message}
+                      {log.message}
                   </p>
+                  )}
                 </motion.div>
-              ))}
-            </AnimatePresence>
+              ))
+            )}
           </div>
         </motion.div>
       )}

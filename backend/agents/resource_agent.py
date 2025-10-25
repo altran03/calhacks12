@@ -3,7 +3,7 @@ Resource Agent - Coordinates food, hygiene kits, clothing, and other necessities
 Handles resource requests, provider matching, and reservation coordination
 """
 
-from uagents import Agent, Context
+from uagents import Agent, Context, Protocol
 from uagents.setup import fund_agent_if_low
 from .models import (
     ResourceRequest, ResourceMatch, WorkflowUpdate
@@ -20,7 +20,10 @@ resource_agent = Agent(
     mailbox=True,
 )
 
-@resource_agent.on_message(model=ResourceRequest)
+# Define Resource Protocol for Agentverse deployment
+resource_protocol = Protocol(name="ResourceProtocol", version="1.0.0")
+
+@resource_protocol.on_message(model=ResourceRequest, replies={WorkflowUpdate})
 async def handle_resource_request(ctx: Context, sender: str, msg: ResourceRequest):
     """Resource agent coordinates post-discharge necessities"""
     ctx.logger.info(f"Processing resource request for {msg.case_id}")
@@ -245,6 +248,9 @@ async def check_resource_availability(resource: Dict[str, Any], request: Resourc
         "capacity": "high",
         "dietary_match": True
     }
+
+# Include protocol with manifest publishing for Agentverse deployment
+resource_agent.include(resource_protocol, publish_manifest=True)
 
 # Fund agent if needed
 if __name__ == "__main__":

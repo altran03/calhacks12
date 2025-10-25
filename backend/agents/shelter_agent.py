@@ -3,7 +3,7 @@ Shelter Agent - Manages shelter capacity and availability
 Handles shelter matching, availability verification, and bed reservations
 """
 
-from uagents import Agent, Context
+from uagents import Agent, Context, Protocol
 from uagents.setup import fund_agent_if_low
 from .models import (
     ShelterMatch, ShelterAvailabilityRequest, ShelterAvailabilityResponse,
@@ -21,7 +21,10 @@ shelter_agent = Agent(
     mailbox=True,
 )
 
-@shelter_agent.on_message(model=ShelterMatch)
+# Define Shelter Protocol for Agentverse deployment
+shelter_protocol = Protocol(name="ShelterProtocol", version="1.0.0")
+
+@shelter_protocol.on_message(model=ShelterMatch, replies={WorkflowUpdate})
 async def handle_shelter_matching(ctx: Context, sender: str, msg: ShelterMatch):
     """Shelter agent manages shelter capacity and availability"""
     ctx.logger.info(f"Processing shelter match for {msg.case_id}")
@@ -74,7 +77,7 @@ async def handle_shelter_matching(ctx: Context, sender: str, msg: ShelterMatch):
             )
         )
 
-@shelter_agent.on_message(model=ShelterAvailabilityRequest)
+@shelter_protocol.on_message(model=ShelterAvailabilityRequest, replies={ShelterAvailabilityResponse})
 async def handle_availability_request(ctx: Context, sender: str, msg: ShelterAvailabilityRequest):
     """Handle direct availability requests"""
     ctx.logger.info(f"Checking availability for {msg.shelter_name}")
@@ -195,6 +198,9 @@ async def query_alternative_shelters(original_match: ShelterMatch) -> list:
             "services": ["family shelter", "case management"]
         }
     ]
+
+# Include protocol with manifest publishing for Agentverse deployment
+shelter_agent.include(shelter_protocol, publish_manifest=True)
 
 # Fund agent if needed
 if __name__ == "__main__":

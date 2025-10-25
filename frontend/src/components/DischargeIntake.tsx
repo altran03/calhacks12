@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   User, 
@@ -143,7 +144,12 @@ interface PatientInfo {
   };
 }
 
-export default function DischargeIntake() {
+interface DischargeIntakeProps {
+  onWorkflowStarted?: () => void;
+}
+
+export default function DischargeIntake({ onWorkflowStarted }: DischargeIntakeProps = {}) {
+  const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
   const [caseId, setCaseId] = useState<string>("");
   const [formData, setFormData] = useState<PatientInfo>({
@@ -620,7 +626,10 @@ export default function DischargeIntake() {
         setSubmittedCaseId(backendCaseId);
         
         console.log("💾 Updated case ID to backend value:", backendCaseId);
-        alert(`✅ Discharge workflow created successfully!\n\n📋 Case ID: ${backendCaseId}\n🤖 Coordinator Agent is processing your request...\n\n💡 You can now navigate to other tabs to track progress!`);
+        
+        // Redirect to workflow page to watch real-time agent coordination
+        console.log("🔄 Redirecting to workflow page...");
+        router.push(`/workflow/${backendCaseId}`);
       } else {
         const error = await response.json();
         console.error("❌ Error submitting discharge:", error);

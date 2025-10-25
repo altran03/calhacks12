@@ -21,7 +21,7 @@ if env_path.exists():
 else:
     print(f"⚠️ No .env file found at {env_path}")
 
-from uagents import Agent, Context
+from uagents import Agent, Context, Protocol
 from uagents.setup import fund_agent_if_low
 from .models import (
     DocumentParseRequest, PDFProcessingRequest, ParsedDischargeData, 
@@ -40,6 +40,9 @@ parser_agent = Agent(
     endpoint=["http://127.0.0.1:8011/submit"],
     mailbox=True,
 )
+
+# Define Parser Protocol for Agentverse deployment
+parser_protocol = Protocol(name="ParserProtocol", version="1.0.0")
 
 # Create processing function that can be reused
 async def process_pdf_internal(case_id: str, file_path: str, file_name: str, file_size: int, document_type: str) -> AutofillData:
@@ -76,7 +79,7 @@ async def process_pdf_internal(case_id: str, file_path: str, file_name: str, fil
     
     return autofill_data
 
-@parser_agent.on_message(model=DocumentParseRequest)
+@parser_protocol.on_message(model=DocumentParseRequest, replies={WorkflowUpdate})
 async def handle_document_parse(ctx: Context, sender: str, msg: DocumentParseRequest):
     """Parser agent processes uploaded discharge documents using LlamaParse + Gemini"""
     ctx.logger.info(f"Processing document parse request for {msg.case_id}")
@@ -146,7 +149,7 @@ async def handle_document_parse(ctx: Context, sender: str, msg: DocumentParseReq
             )
         )
 
-@parser_agent.on_message(model=PDFProcessingRequest)
+@parser_protocol.on_message(model=PDFProcessingRequest, replies={AutofillData})
 async def handle_pdf_processing(ctx: Context, sender: str, msg: PDFProcessingRequest):
     """Parser agent processes uploaded PDF files for autofill via Fetch.ai messaging"""
     ctx.logger.info(f"Processing PDF file {msg.file_name} for case {msg.case_id}")
@@ -480,6 +483,9 @@ async def get_mock_discharge_summary() -> str:
     DISCHARGE DISPOSITION:
     Discharged to shelter (pending placement)
     """
+
+# Include protocol with manifest publishing for Agentverse deployment
+parser_agent.include(parser_protocol, publish_manifest=True)
 
 # Fund agent if needed
 if __name__ == "__main__":

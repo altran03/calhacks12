@@ -183,7 +183,7 @@ export default function Dashboard({ activeView, setActiveView }: DashboardProps)
           {/* Content */}
           <div className="relative z-10">
             {activeView === "dashboard" && <CaseSummary />}
-            {activeView === "intake" && <DischargeIntake />}
+            {activeView === "intake" && <DischargeIntake onWorkflowStarted={() => setActiveView("timeline")} />}
             {activeView === "timeline" && <WorkflowTimeline />}
             {activeView === "map" && <MapView />}
             {activeView === "transport" && <TransportTracker />}

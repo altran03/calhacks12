@@ -3,7 +3,7 @@ Pharmacy Agent - Ensures medication continuity and access
 Handles pharmacy requests, medication availability, and prescription coordination
 """
 
-from uagents import Agent, Context
+from uagents import Agent, Context, Protocol
 from uagents.setup import fund_agent_if_low
 from .models import (
     PharmacyRequest, PharmacyMatch, WorkflowUpdate
@@ -20,7 +20,10 @@ pharmacy_agent = Agent(
     mailbox=True,
 )
 
-@pharmacy_agent.on_message(model=PharmacyRequest)
+# Define Pharmacy Protocol for Agentverse deployment
+pharmacy_protocol = Protocol(name="PharmacyProtocol", version="1.0.0")
+
+@pharmacy_protocol.on_message(model=PharmacyRequest, replies={PharmacyMatch, WorkflowUpdate})
 async def handle_pharmacy_request(ctx: Context, sender: str, msg: PharmacyRequest):
     """Pharmacy agent ensures post-discharge medication access"""
     ctx.logger.info(f"Processing pharmacy request for {msg.case_id}")
@@ -171,6 +174,9 @@ async def check_medication_availability_via_vapi(pharmacy: Dict[str, Any], medic
         "ready_time": "30 minutes" if all_available else "unavailable",
         "pharmacy_notes": "All medications available" if all_available else "Some medications require prior authorization"
     }
+
+# Include protocol with manifest publishing for Agentverse deployment
+pharmacy_agent.include(pharmacy_protocol, publish_manifest=True)
 
 # Fund agent if needed
 if __name__ == "__main__":

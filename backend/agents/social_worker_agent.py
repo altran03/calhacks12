@@ -3,7 +3,7 @@ Social Worker Agent - Manages social worker assignments and follow-up care
 Handles case assignments, follow-up scheduling, and care coordination
 """
 
-from uagents import Agent, Context
+from uagents import Agent, Context, Protocol
 from uagents.setup import fund_agent_if_low
 from .models import (
     SocialWorkerAssignment, SocialWorkerConfirmation, WorkflowUpdate
@@ -20,7 +20,10 @@ social_worker_agent = Agent(
     mailbox=True,
 )
 
-@social_worker_agent.on_message(model=SocialWorkerAssignment)
+# Define Social Worker Protocol for Agentverse deployment
+social_worker_protocol = Protocol(name="SocialWorkerProtocol", version="1.0.0")
+
+@social_worker_protocol.on_message(model=SocialWorkerAssignment, replies={SocialWorkerConfirmation, WorkflowUpdate})
 async def handle_social_worker_assignment(ctx: Context, sender: str, msg: SocialWorkerAssignment):
     """Social worker agent manages follow-up care"""
     ctx.logger.info(f"Processing social worker assignment for {msg.case_id}")
@@ -86,7 +89,7 @@ async def handle_social_worker_assignment(ctx: Context, sender: str, msg: Social
             )
         )
 
-@social_worker_agent.on_message(model=WorkflowUpdate)
+@social_worker_protocol.on_message(model=WorkflowUpdate)
 async def handle_workflow_update(ctx: Context, sender: str, msg: WorkflowUpdate):
     """Handle workflow updates that require social worker attention"""
     if msg.step == "benefits_expedited" and msg.status == "info":
@@ -225,6 +228,9 @@ async def check_social_worker_availability(worker: Dict[str, Any]) -> Dict[str, 
         "next_available": "2024-01-15",
         "specialization_match": True
     }
+
+# Include protocol with manifest publishing for Agentverse deployment
+social_worker_agent.include(social_worker_protocol, publish_manifest=True)
 
 # Fund agent if needed
 if __name__ == "__main__":

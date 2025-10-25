@@ -3,7 +3,7 @@ Eligibility Agent - Automates benefit verification and eligibility checking
 Handles public benefit eligibility, expedited processing, and benefit coordination
 """
 
-from uagents import Agent, Context
+from uagents import Agent, Context, Protocol
 from uagents.setup import fund_agent_if_low
 from .models import (
     EligibilityRequest, EligibilityResult, WorkflowUpdate
@@ -20,7 +20,10 @@ eligibility_agent = Agent(
     mailbox=True,
 )
 
-@eligibility_agent.on_message(model=EligibilityRequest)
+# Define Eligibility Protocol for Agentverse deployment
+eligibility_protocol = Protocol(name="EligibilityProtocol", version="1.0.0")
+
+@eligibility_protocol.on_message(model=EligibilityRequest, replies={EligibilityResult, WorkflowUpdate})
 async def handle_eligibility_check(ctx: Context, sender: str, msg: EligibilityRequest):
     """Eligibility agent verifies public benefit eligibility"""
     ctx.logger.info(f"Processing eligibility check for {msg.case_id}")
@@ -220,6 +223,9 @@ def generate_next_steps(eligible_programs: List[Dict[str, Any]], requires_manual
         next_steps.append("Contact social worker for benefit navigation assistance")
     
     return next_steps
+
+# Include protocol with manifest publishing for Agentverse deployment
+eligibility_agent.include(eligibility_protocol, publish_manifest=True)
 
 # Fund agent if needed
 if __name__ == "__main__":

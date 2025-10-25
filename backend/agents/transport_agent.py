@@ -3,7 +3,7 @@ Transport Agent - Manages transportation scheduling and tracking
 Handles transport requests, driver assignment, and route optimization
 """
 
-from uagents import Agent, Context
+from uagents import Agent, Context, Protocol
 from uagents.setup import fund_agent_if_low
 from .models import (
     TransportRequest, TransportConfirmation, WorkflowUpdate
@@ -20,7 +20,10 @@ transport_agent = Agent(
     mailbox=True,
 )
 
-@transport_agent.on_message(model=TransportRequest)
+# Define Transport Protocol for Agentverse deployment
+transport_protocol = Protocol(name="TransportProtocol", version="1.0.0")
+
+@transport_protocol.on_message(model=TransportRequest, replies={TransportConfirmation, WorkflowUpdate})
 async def handle_transport_request(ctx: Context, sender: str, msg: TransportRequest):
     """Transport agent schedules and tracks transportation"""
     ctx.logger.info(f"Processing transport request for {msg.case_id}")
@@ -168,6 +171,9 @@ async def schedule_transport_via_vapi(request: TransportRequest, provider: Dict[
         "driver_phone": "(415) 555-0125",
         "confirmation_number": "TR" + str(datetime.now().timestamp())[-6:]
     }
+
+# Include protocol with manifest publishing for Agentverse deployment
+transport_agent.include(transport_protocol, publish_manifest=True)
 
 # Fund agent if needed
 if __name__ == "__main__":

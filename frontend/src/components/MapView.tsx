@@ -37,6 +37,14 @@ const FullscreenControl = dynamic(() => import("react-map-gl").then((mod) => mod
   ssr: false,
 });
 
+const Source = dynamic(() => import("react-map-gl").then((mod) => mod.Source), {
+  ssr: false,
+});
+
+const Layer = dynamic(() => import("react-map-gl").then((mod) => mod.Layer), {
+  ssr: false,
+});
+
 interface Shelter {
   name: string;
   address: string;
@@ -58,6 +66,13 @@ interface Workflow {
   currentStep: string;
   assignedShelter?: string;
   eta?: string;
+  transport?: {
+    provider: string;
+    vehicle_type: string;
+    eta: string;
+    route: Array<{lat: number; lng: number}>;
+    status: string;
+  };
 }
 
 export default function MapView() {
@@ -82,6 +97,13 @@ export default function MapView() {
     setIsClient(true);
     fetchShelters();
     fetchWorkflows();
+    
+    // Poll for workflow updates every 3 seconds
+    const pollInterval = setInterval(() => {
+      fetchWorkflows();
+    }, 3000);
+    
+    return () => clearInterval(pollInterval);
   }, []);
 
   const fetchShelters = async () => {
@@ -132,7 +154,30 @@ export default function MapView() {
 
   const fetchWorkflows = async () => {
     try {
-      // Simulate fetching workflow data
+      // Fetch real workflow data
+      const storedCaseId = localStorage.getItem('current_case_id');
+      if (storedCaseId) {
+        const response = await fetch(`http://localhost:8000/api/workflows/${storedCaseId}`);
+        if (response.ok) {
+          const workflowData = await response.json();
+          
+          // Convert backend workflow to frontend format
+          const workflow: Workflow = {
+            id: workflowData.case_id,
+            patientName: workflowData.patient?.contact_info?.name || "Unknown",
+            status: workflowData.status === "coordinated" ? "completed" : "in_progress",
+            currentStep: workflowData.current_step?.replace(/_/g, ' ') || "Processing",
+            assignedShelter: workflowData.shelter?.name,
+            eta: workflowData.transport?.eta,
+            transport: workflowData.transport
+          };
+          
+          setWorkflows([workflow]);
+          return;
+        }
+      }
+      
+      // Fallback to mock data
       const mockWorkflows: Workflow[] = [
         {
           id: "WF001",
@@ -141,13 +186,18 @@ export default function MapView() {
           currentStep: "Transport Coordination",
           assignedShelter: "Mission Neighborhood Resource Center",
           eta: "15 mins",
-        },
-        {
-          id: "WF002",
-          patientName: "Jane Smith",
-          status: "completed",
-          currentStep: "Follow-up Care",
-          assignedShelter: "Hamilton Family Center",
+          transport: {
+            provider: "SF Paratransit",
+            vehicle_type: "wheelchair_accessible",
+            eta: "30 minutes",
+            route: [
+              {lat: 37.7749, lng: -122.4194},
+              {lat: 37.7799, lng: -122.4144},
+              {lat: 37.7824, lng: -122.4119},
+              {lat: 37.7849, lng: -122.4094}
+            ],
+            status: "scheduled"
+          }
         },
       ];
       setWorkflows(mockWorkflows);
@@ -254,6 +304,71 @@ export default function MapView() {
             </div>
           </div>
 
+          {/* Transport Details */}
+          {workflows.some(w => w.transport) && (
+            <div className="bg-white rounded-lg border border-gray-200 p-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">Transport Details</h3>
+              {workflows.filter(w => w.transport).map((workflow) => (
+                <div key={workflow.id} className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="flex items-center space-x-2">
+                      <Truck className="w-5 h-5 text-blue-600" />
+                      <div>
+                        <p className="font-semibold text-sm text-gray-900">{workflow.transport!.provider}</p>
+                        <p className="text-xs text-gray-600 capitalize">{workflow.transport!.vehicle_type.replace('_', ' ')}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-gray-600">ETA</p>
+                      <p className="font-semibold text-sm text-blue-600">{workflow.transport!.eta}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-start space-x-2">
+                      <MapPin className="w-4 h-4 text-blue-500 mt-0.5" />
+                      <div>
+                        <p className="text-xs text-gray-600">Pickup</p>
+                        <p className="font-medium text-gray-900">Hospital</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start space-x-2">
+                      <CheckCircle className="w-4 h-4 text-green-500 mt-0.5" />
+                      <div>
+                        <p className="text-xs text-gray-600">Dropoff</p>
+                        <p className="font-medium text-gray-900">{workflow.assignedShelter || "Shelter"}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="pt-3 border-t border-gray-200">
+                    <div className="flex items-center space-x-2 text-xs text-gray-600">
+                      <div className="flex items-center space-x-1">
+                        <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                        <span>Pickup</span>
+                      </div>
+                      <div className="flex-1 border-t-2 border-dashed border-blue-300"></div>
+                      <div className="flex items-center space-x-1">
+                        <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                        <span>Dropoff</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div 
+                    className="p-2 rounded-lg text-center text-xs font-medium"
+                    style={{
+                      background: workflow.transport!.status === "scheduled" ? "rgba(59, 130, 246, 0.1)" : "rgba(16, 185, 129, 0.1)",
+                      color: workflow.transport!.status === "scheduled" ? "#3B82F6" : "#10B981"
+                    }}
+                  >
+                    Status: {workflow.transport!.status.charAt(0).toUpperCase() + workflow.transport!.status.slice(1)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Shelter Legend */}
           <div className="bg-white rounded-lg border border-gray-200 p-4">
             <h3 className="text-lg font-semibold text-gray-900 mb-3">Shelter Status</h3>
@@ -318,6 +433,81 @@ export default function MapView() {
               >
                 <NavigationControl position="top-left" />
                 <FullscreenControl position="top-left" />
+
+                {/* Render transport routes */}
+                {workflows.filter(w => w.transport?.route).map((workflow) => {
+                  const route = workflow.transport!.route;
+                  
+                  // Create GeoJSON for the route
+                  const routeGeoJSON = {
+                    type: 'Feature' as const,
+                    geometry: {
+                      type: 'LineString' as const,
+                      coordinates: route.map(point => [point.lng, point.lat])
+                    },
+                    properties: {}
+                  };
+                  
+                  return (
+                    <React.Fragment key={workflow.id}>
+                      {/* Route line */}
+                      <Source
+                        id={`route-${workflow.id}`}
+                        type="geojson"
+                        data={routeGeoJSON}
+                      >
+                        <Layer
+                          id={`route-line-${workflow.id}`}
+                          type="line"
+                          paint={{
+                            'line-color': '#3B82F6',
+                            'line-width': 4,
+                            'line-opacity': 0.8
+                          }}
+                        />
+                        <Layer
+                          id={`route-line-outline-${workflow.id}`}
+                          type="line"
+                          paint={{
+                            'line-color': '#1E40AF',
+                            'line-width': 6,
+                            'line-opacity': 0.4
+                          }}
+                        />
+                      </Source>
+                      
+                      {/* Pickup marker */}
+                      <Marker
+                        longitude={route[0].lng}
+                        latitude={route[0].lat}
+                      >
+                        <div className="relative">
+                          <div className="w-8 h-8 rounded-full bg-blue-500 border-4 border-white shadow-lg flex items-center justify-center">
+                            <MapPin className="w-4 h-4 text-white" />
+                          </div>
+                          <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 whitespace-nowrap bg-blue-500 text-white text-xs px-2 py-1 rounded shadow-lg">
+                            Pickup
+                          </div>
+                        </div>
+                      </Marker>
+                      
+                      {/* Dropoff marker */}
+                      <Marker
+                        longitude={route[route.length - 1].lng}
+                        latitude={route[route.length - 1].lat}
+                      >
+                        <div className="relative">
+                          <div className="w-8 h-8 rounded-full bg-green-500 border-4 border-white shadow-lg flex items-center justify-center">
+                            <CheckCircle className="w-4 h-4 text-white" />
+                          </div>
+                          <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 whitespace-nowrap bg-green-500 text-white text-xs px-2 py-1 rounded shadow-lg">
+                            Dropoff
+                          </div>
+                        </div>
+                      </Marker>
+                    </React.Fragment>
+                  );
+                })}
 
                 {shelters.map((shelter) => (
                   <Marker

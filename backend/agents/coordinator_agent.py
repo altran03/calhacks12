@@ -3,7 +3,7 @@ Coordinator Agent - Central workflow orchestrator
 Manages the entire discharge workflow and coordinates between all agents
 """
 
-from uagents import Agent, Context, Model
+from uagents import Agent, Context, Model, Protocol
 from uagents.setup import fund_agent_if_low
 from agents.models import (
     DischargeRequest, WorkflowUpdate, ShelterMatch, TransportRequest, 
@@ -21,6 +21,9 @@ coordinator_agent = Agent(
     endpoint=["http://127.0.0.1:8002/submit"],
     mailbox=True,
 )
+
+# Define Coordinator Protocol for Agentverse deployment
+coordinator_protocol = Protocol(name="CoordinatorProtocol", version="1.0.0")
 
 # Model for HTTP endpoint (includes form_data)
 class DischargeRequestWithFormData(Model):
@@ -112,7 +115,7 @@ async def coordinate_discharge_internal(ctx: Context, case_id: str, patient_name
             "error": str(e)
         }
 
-@coordinator_agent.on_message(model=DischargeRequest)
+@coordinator_protocol.on_message(model=DischargeRequest, replies={WorkflowUpdate})
 async def coordinate_discharge(ctx: Context, sender: str, msg: DischargeRequest):
     """Coordinator agent manages the entire discharge workflow (via Fetch.ai message)"""
     ctx.logger.info(f"Coordinating discharge workflow for {msg.case_id}")
@@ -193,7 +196,7 @@ async def handle_discharge_via_http(ctx: Context, req: DischargeRequestWithFormD
             error=str(e)
         )
 
-@coordinator_agent.on_message(model=WorkflowUpdate)
+@coordinator_protocol.on_message(model=WorkflowUpdate)
 async def handle_workflow_update(ctx: Context, sender: str, msg: WorkflowUpdate):
     """Handle updates from other agents"""
     ctx.logger.info(f"Received workflow update: {msg.step} - {msg.status}")
@@ -238,6 +241,9 @@ async def query_bright_data_for_shelters_from_form(
         "services": ["medical respite", "case management", "meals"],
         "phone": "(415) 431-4000"
     }
+
+# Include protocol with manifest publishing for Agentverse deployment
+coordinator_agent.include(coordinator_protocol, publish_manifest=True)
 
 # Fund agent if needed
 if __name__ == "__main__":
