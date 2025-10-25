@@ -1,49 +1,25 @@
-# General
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
+# Root level gitignore for CareLink project
 
-# IDEs and editors
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
+# Frontend (Next.js)
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/dist/
+frontend/.env.local
+frontend/.env
+frontend/tsconfig.tsbuildinfo
 
-# Logs
-logs/
-*.log
-
-# Temporary files
-tmp/
-temp/
-.tmp/
-
-# Backup files
-*.bak
-*.backup
-*.old
-
-# Local development
-.local/
-local/
-
-# Project specific
-carelink/node_modules/
-carelink/.next/
-carelink/out/
-carelink/build/
-carelink/dist/
-carelink/backend/.env
-carelink/backend/venv/
-carelink/backend/__pycache__/
-carelink/backend/*.pyc
-carelink/backend/*.pyo
-carelink/backend/*.pyd
+# Backend (Python/FastAPI)
+backend/.env
+backend/venv/
+backend/__pycache__/
+backend/*.pyc
+backend/*.pyo
+backend/*.pyd
+backend/.pytest_cache/
+backend/coverage/
+backend/htmlcov/
 
 # API keys and secrets
 *.key
@@ -72,3 +48,42 @@ brightdata_cache/
 agent_data/
 agent_logs/
 agent_wallets/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Local development
+.local/
+local/

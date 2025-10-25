@@ -1,0 +1,29 @@
+{
+  "name": "carelink-backend",
+  "version": "1.0.0",
+  "description": "CareLink Backend API - FastAPI with Fetch.ai agents",
+  "private": true,
+  "scripts": {
+    "dev": "source venv/bin/activate && python main.py",
+    "start": "source venv/bin/activate && uvicorn main:app --host 0.0.0.0 --port 8000",
+    "install": "python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt",
+    "test": "source venv/bin/activate && python -m pytest",
+    "lint": "source venv/bin/activate && flake8 .",
+    "format": "source venv/bin/activate && black .",
+    "agents": "source venv/bin/activate && python agents.py"
+  },
+  "keywords": [
+    "fastapi",
+    "python",
+    "healthcare",
+    "agents",
+    "fetchai",
+    "vapi",
+    "brightdata"
+  ],
+  "author": "CareLink Team",
+  "license": "MIT",
+  "engines": {
+    "python": ">=3.9.0"
+  }
+}
