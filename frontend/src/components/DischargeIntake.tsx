@@ -1,113 +1,137 @@
 "use client";
 
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { User, FileText, Phone, Calendar, MapPin, Stethoscope, Home, Building, TestTube, Pill } from "lucide-react";
-
-interface PatientContactInfo {
-  name: string;
-  phone1: string;
-  phone2: string;
-  dateOfBirth: string;
-  address: string;
-  apartment: string;
-  city: string;
-  state: string;
-  zip: string;
-  emergencyContactName: string;
-  emergencyContactRelationship: string;
-  emergencyContactPhone: string;
-}
-
-interface DischargeInformation {
-  dischargingFacility: string;
-  dischargingFacilityPhone: string;
-  facilityAddress: string;
-  facilityFloor: string;
-  facilityCity: string;
-  facilityState: string;
-  facilityZip: string;
-  medicalRecordNumber: string;
-  dateOfAdmission: string;
-  plannedDischargeDate: string;
-  dischargedTo: string;
-  dischargeAddress: string;
-  dischargeApartment: string;
-  dischargeCity: string;
-  dischargeState: string;
-  dischargeZip: string;
-  dischargePhone: string;
-  travelOutsideNYC: boolean;
-  travelDateDestination: string;
-}
-
-interface FollowUpAppointment {
-  appointmentDate: string;
-  physicianName: string;
-  physicianPhone: string;
-  physicianCell: string;
-  physicianAddress: string;
-  physicianCity: string;
-  physicianState: string;
-  physicianZip: string;
-  barriersToAdherence: string[];
-  physicalDisability: string;
-  medicalCondition: string;
-  substanceUse: string;
-  mentalDisorder: string;
-  otherBarriers: string;
-}
-
-interface LaboratoryResults {
-  smear1Date: string;
-  smear1Source: string;
-  smear1Result: string;
-  smear1Grade: string;
-  smear2Date: string;
-  smear2Source: string;
-  smear2Result: string;
-  smear2Grade: string;
-  smear3Date: string;
-  smear3Source: string;
-  smear3Result: string;
-  smear3Grade: string;
-}
-
-interface TreatmentInformation {
-  therapyInitiatedDate: string;
-  therapyInterrupted: boolean;
-  interruptionReason: string;
-  medications: {
-    inh: { prescribed: boolean; dosage: string };
-    rif: { prescribed: boolean; dosage: string };
-    pza: { prescribed: boolean; dosage: string };
-    emb: { prescribed: boolean; dosage: string };
-    sm: { prescribed: boolean; dosage: string };
-    vitaminB6: { prescribed: boolean; dosage: string };
-    injectables: { prescribed: boolean; type: string };
-    other: { prescribed: boolean; type: string };
-  };
-  frequency: string;
-  centralLineInserted: boolean;
-  daysOfMedicationSupplied: string;
-  patientAgreedToDOT: boolean;
-  formFilledByName: string;
-  formFilledDate: string;
-  responsiblePhysicianName: string;
-  physicianLicenseNumber: string;
-  physicianPhone: string;
-}
+import React, { useState, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { 
+  User, 
+  Building2, 
+  MapPin, 
+  Package, 
+  FileCheck, 
+  Upload, 
+  X, 
+  File, 
+  CheckCircle,
+  ArrowRight,
+  ArrowLeft,
+  Sparkles,
+  Heart,
+  Stethoscope,
+  Home,
+  ShoppingBag,
+  Truck,
+  Users
+} from "lucide-react";
 
 interface PatientInfo {
-  contactInfo: PatientContactInfo;
-  dischargeInfo: DischargeInformation;
-  followUp: FollowUpAppointment;
-  labResults: LaboratoryResults;
-  treatmentInfo: TreatmentInformation;
+  // Patient and Admission Information
+  name: string;
+  dateOfBirth: string;
+  medicalRecordNumber: string;
+  gender: string;
+  housingStatus: "homeless" | "housed" | "unstable";
+  principalResidence: string;
+  
+  // Medical Information
+  primaryDiagnosis: string;
+  treatmentSummary: string;
+  dischargeDateTime: string;
+  medicallyStable: boolean;
+  
+  // Post-Discharge Planning
+  plannedDestination: string;
+  acceptingAgencyName: string;
+  acceptingAgencyContact: string;
+  interimLocation: string;
+  transportationArranged: string;
+  followUpClinic: string;
+  
+  // Resource Provision
+  mealOffered: "yes" | "no" | "declined" | "";
+  clothingProvided: "yes" | "no" | "not_needed" | "";
+  dischargeMedication: "yes" | "no" | "na" | "";
+  medicationList: string;
+  infectiousDiseaseScreening: "yes" | "no" | "";
+  insuranceScreening: "yes" | "no" | "";
+  socialWorkerAssigned: string;
+  
+  // Documentation and Consent
+  consentForReferral: "digital" | "written" | "verbal" | "";
+  staffName: string;
+  intakeDate: string;
+
+  // Parser Agent Autofill Structures (optional)
+  contactInfo?: {
+    name?: string;
+    phone1?: string;
+    phone2?: string;
+    dateOfBirth?: string;
+    address?: string;
+    apartment?: string;
+    city?: string;
+    state?: string;
+    zip?: string;
+    emergencyContactName?: string;
+    emergencyContactRelationship?: string;
+    emergencyContactPhone?: string;
+  };
+  dischargeInfo?: {
+    dischargingFacility?: string;
+    dischargingFacilityPhone?: string;
+    facilityAddress?: string;
+    facilityCity?: string;
+    facilityState?: string;
+    facilityZip?: string;
+    medicalRecordNumber?: string;
+    dateOfAdmission?: string;
+    plannedDischargeDate?: string;
+    dischargedTo?: string;
+  };
+  followUp?: {
+    appointmentDate?: string;
+    physicianName?: string;
+    physicianPhone?: string;
+    barriersToAdherence?: string;
+    medicalCondition?: string;
+  };
+  treatmentInfo?: {
+    therapyInitiatedDate?: string;
+    medications?: string;
+    frequency?: string;
+    daysOfMedicationSupplied?: string;
+  };
 }
 
 export default function DischargeIntake() {
+  const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<PatientInfo>({
+    name: "",
+    dateOfBirth: "",
+    medicalRecordNumber: "",
+    gender: "",
+    housingStatus: "homeless",
+    principalResidence: "",
+    primaryDiagnosis: "",
+    treatmentSummary: "",
+    dischargeDateTime: "",
+    medicallyStable: true,
+    plannedDestination: "",
+    acceptingAgencyName: "",
+    acceptingAgencyContact: "",
+    interimLocation: "",
+    transportationArranged: "",
+    followUpClinic: "",
+    mealOffered: "",
+    clothingProvided: "",
+    dischargeMedication: "",
+    medicationList: "",
+    infectiousDiseaseScreening: "",
+    insuranceScreening: "",
+    socialWorkerAssigned: "",
+    consentForReferral: "",
+    staffName: "",
+    intakeDate: new Date().toISOString().split('T')[0],
+    // Initialize nested objects for parser agent autofill
     contactInfo: {
       name: "",
       phone1: "",
@@ -126,7 +150,6 @@ export default function DischargeIntake() {
       dischargingFacility: "",
       dischargingFacilityPhone: "",
       facilityAddress: "",
-      facilityFloor: "",
       facilityCity: "",
       facilityState: "",
       facilityZip: "",
@@ -134,1607 +157,1224 @@ export default function DischargeIntake() {
       dateOfAdmission: "",
       plannedDischargeDate: "",
       dischargedTo: "",
-      dischargeAddress: "",
-      dischargeApartment: "",
-      dischargeCity: "",
-      dischargeState: "",
-      dischargeZip: "",
-      dischargePhone: "",
-      travelOutsideNYC: false,
-      travelDateDestination: "",
     },
     followUp: {
       appointmentDate: "",
       physicianName: "",
       physicianPhone: "",
-      physicianCell: "",
-      physicianAddress: "",
-      physicianCity: "",
-      physicianState: "",
-      physicianZip: "",
-      barriersToAdherence: [],
-      physicalDisability: "",
+      barriersToAdherence: "",
       medicalCondition: "",
-      substanceUse: "",
-      mentalDisorder: "",
-      otherBarriers: "",
-    },
-    labResults: {
-      smear1Date: "",
-      smear1Source: "",
-      smear1Result: "",
-      smear1Grade: "",
-      smear2Date: "",
-      smear2Source: "",
-      smear2Result: "",
-      smear2Grade: "",
-      smear3Date: "",
-      smear3Source: "",
-      smear3Result: "",
-      smear3Grade: "",
     },
     treatmentInfo: {
       therapyInitiatedDate: "",
-      therapyInterrupted: false,
-      interruptionReason: "",
-      medications: {
-        inh: { prescribed: false, dosage: "" },
-        rif: { prescribed: false, dosage: "" },
-        pza: { prescribed: false, dosage: "" },
-        emb: { prescribed: false, dosage: "" },
-        sm: { prescribed: false, dosage: "" },
-        vitaminB6: { prescribed: false, dosage: "" },
-        injectables: { prescribed: false, type: "" },
-        other: { prescribed: false, type: "" },
-      },
+      medications: "",
       frequency: "",
-      centralLineInserted: false,
       daysOfMedicationSupplied: "",
-      patientAgreedToDOT: false,
-      formFilledByName: "",
-      formFilledDate: "",
-      responsiblePhysicianName: "",
-      physicianLicenseNumber: "",
-      physicianPhone: "",
     },
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [dragActive, setDragActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const steps = [
+    { 
+      id: 0, 
+      title: "Upload Docs", 
+      icon: Upload, 
+      color: "#8B5CF6",
+      description: "Upload documents first to autofill the form"
+    },
+    { 
+      id: 1, 
+      title: "Patient Info", 
+      icon: User, 
+      color: "#0D7377",
+      description: "Basic patient and admission information"
+    },
+    { 
+      id: 2, 
+      title: "Medical Details", 
+      icon: Stethoscope, 
+      color: "#D17A5C",
+      description: "Diagnosis and treatment summary"
+    },
+    { 
+      id: 3, 
+      title: "Discharge Plan", 
+      icon: MapPin, 
+      color: "#2D9F7E",
+      description: "Destination and follow-up arrangements"
+    },
+    { 
+      id: 4, 
+      title: "Resources", 
+      icon: ShoppingBag, 
+      color: "#E8A87C",
+      description: "Meals, clothing, medication, and screenings"
+    },
+    { 
+      id: 5, 
+      title: "Documentation", 
+      icon: FileCheck, 
+      color: "#14919B",
+      description: "Consent and staff information"
+    },
+  ];
+
+  const handleFileUpload = (files: FileList | null) => {
+    if (!files) return;
+    
+    const newFiles = Array.from(files).filter(file => {
+      if (file.type !== 'application/pdf') {
+        alert('Please upload only PDF files.');
+        return false;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        alert('File size must be less than 10MB.');
+        return false;
+      }
+      return true;
+    });
+    
+    setUploadedFiles(prev => [...prev, ...newFiles]);
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFileUpload(e.dataTransfer.files);
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const openFileDialog = () => {
+    fileInputRef.current?.click();
+  };
+
+  const processPDFFiles = async () => {
+    if (uploadedFiles.length === 0) {
+      alert("Please upload PDF files first");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      
+      const formDataToSend = new FormData();
+      formDataToSend.append("case_id", `CASE_${Date.now()}`);
+      
+      uploadedFiles.forEach((file) => {
+        formDataToSend.append("files", file);
+      });
+
+      const response = await fetch("http://localhost:8000/api/process-pdf", {
+        method: "POST",
+        body: formDataToSend,
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to process PDF files");
+      }
+
+      const result = await response.json();
+      console.log("Parser Agent Response:", result);
+      
+      if (result.status === "success" && result.autofill_data) {
+        const autofillData = result.autofill_data;
+        
+        // Parser agent returns structured data - map it to form fields
+        setFormData(prevData => {
+          const prevContactInfo = prevData.contactInfo ?? {};
+          const prevDischargeInfo = prevData.dischargeInfo ?? {};
+          const prevFollowUp = prevData.followUp ?? {};
+          const prevTreatmentInfo = prevData.treatmentInfo ?? {};
+          
+          return {
+            ...prevData,
+            // Map contact_info to flat form fields
+            name: autofillData.contact_info?.name || prevData.name,
+            dateOfBirth: autofillData.contact_info?.date_of_birth || prevData.dateOfBirth,
+            
+            // Map discharge_info to flat form fields  
+            medicalRecordNumber: autofillData.discharge_info?.medical_record_number || prevData.medicalRecordNumber,
+            principalResidence: autofillData.discharge_info?.discharging_facility || prevData.principalResidence,
+            dischargeDateTime: autofillData.discharge_info?.planned_discharge_date || prevData.dischargeDateTime,
+            
+            // Map follow_up to flat form fields
+            followUpClinic: autofillData.follow_up?.physician_name || prevData.followUpClinic,
+            primaryDiagnosis: autofillData.follow_up?.medical_condition || prevData.primaryDiagnosis,
+            
+            // Map treatment_info to flat form fields
+            medicationList: Array.isArray(autofillData.treatment_info?.all_medications) 
+              ? autofillData.treatment_info.all_medications.join(', ')
+              : (autofillData.treatment_info?.medications || prevData.medicationList),
+            
+            treatmentSummary: autofillData.treatment_info?.diagnosis || prevData.treatmentSummary,
+            
+            // Keep nested objects for reference
+            contactInfo: {
+              ...prevContactInfo,
+              name: autofillData.contact_info?.name || prevContactInfo.name,
+              phone1: autofillData.contact_info?.phone1 || prevContactInfo.phone1,
+              phone2: autofillData.contact_info?.phone2 || prevContactInfo.phone2,
+              dateOfBirth: autofillData.contact_info?.date_of_birth || prevContactInfo.dateOfBirth,
+              address: autofillData.contact_info?.address || prevContactInfo.address,
+              apartment: autofillData.contact_info?.apartment || prevContactInfo.apartment,
+              city: autofillData.contact_info?.city || prevContactInfo.city,
+              state: autofillData.contact_info?.state || prevContactInfo.state,
+              zip: autofillData.contact_info?.zip || prevContactInfo.zip,
+              emergencyContactName: autofillData.contact_info?.emergency_contact_name || prevContactInfo.emergencyContactName,
+              emergencyContactRelationship: autofillData.contact_info?.emergency_contact_relationship || prevContactInfo.emergencyContactRelationship,
+              emergencyContactPhone: autofillData.contact_info?.emergency_contact_phone || prevContactInfo.emergencyContactPhone,
+            },
+            dischargeInfo: {
+              ...prevDischargeInfo,
+              dischargingFacility: autofillData.discharge_info?.discharging_facility || prevDischargeInfo.dischargingFacility,
+              dischargingFacilityPhone: autofillData.discharge_info?.discharging_facility_phone || prevDischargeInfo.dischargingFacilityPhone,
+              facilityAddress: autofillData.discharge_info?.facility_address || prevDischargeInfo.facilityAddress,
+              facilityCity: autofillData.discharge_info?.facility_city || prevDischargeInfo.facilityCity,
+              facilityState: autofillData.discharge_info?.facility_state || prevDischargeInfo.facilityState,
+              facilityZip: autofillData.discharge_info?.facility_zip || prevDischargeInfo.facilityZip,
+              medicalRecordNumber: autofillData.discharge_info?.medical_record_number || prevDischargeInfo.medicalRecordNumber,
+              dateOfAdmission: autofillData.discharge_info?.date_of_admission || prevDischargeInfo.dateOfAdmission,
+              plannedDischargeDate: autofillData.discharge_info?.planned_discharge_date || prevDischargeInfo.plannedDischargeDate,
+              dischargedTo: autofillData.discharge_info?.discharged_to || prevDischargeInfo.dischargedTo,
+            },
+            followUp: {
+              ...prevFollowUp,
+              appointmentDate: autofillData.follow_up?.appointment_date || prevFollowUp.appointmentDate,
+              physicianName: autofillData.follow_up?.physician_name || prevFollowUp.physicianName,
+              physicianPhone: autofillData.follow_up?.physician_phone || prevFollowUp.physicianPhone,
+              barriersToAdherence: autofillData.follow_up?.barriers_to_adherence || prevFollowUp.barriersToAdherence,
+              medicalCondition: autofillData.follow_up?.medical_condition || prevFollowUp.medicalCondition,
+            },
+            treatmentInfo: {
+              ...prevTreatmentInfo,
+              therapyInitiatedDate: autofillData.treatment_info?.therapy_initiated_date || prevTreatmentInfo.therapyInitiatedDate,
+              medications: autofillData.treatment_info?.medications || prevTreatmentInfo.medications,
+              frequency: autofillData.treatment_info?.frequency || prevTreatmentInfo.frequency,
+              daysOfMedicationSupplied: autofillData.treatment_info?.days_of_medication_supplied || prevTreatmentInfo.daysOfMedicationSupplied,
+            },
+          };
+        });
+        
+        const confidence = autofillData.confidence_score || 0.85;
+        alert(`✅ PDF processed successfully via Parser Agent!\n\n📊 Confidence Score: ${(confidence * 100).toFixed(0)}%\n🤖 Agent: ${result.agent_used || 'parser_agent'}\n📡 Port: ${result.agent_port || 8011}\n\nForm has been auto-filled with extracted data.`);
+      }
+      
+    } catch (error) {
+      console.error("Error processing PDF files:", error);
+      alert("Failed to process PDF files. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSubmit = async () => {
     setIsSubmitting(true);
 
     try {
+      const formDataToSend = new FormData();
+      formDataToSend.append('formData', JSON.stringify(formData));
+      
+      uploadedFiles.forEach((file, index) => {
+        formDataToSend.append(`file_${index}`, file);
+      });
+      
       const response = await fetch("http://localhost:8000/api/discharge", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
+        body: formDataToSend,
       });
 
       if (response.ok) {
         setSubmitted(true);
-        // Reset form after 3 seconds
-        setTimeout(() => {
-          setSubmitted(false);
-          setFormData({
-            contactInfo: {
-              name: "",
-              phone1: "",
-              phone2: "",
-              dateOfBirth: "",
-              address: "",
-              apartment: "",
-              city: "",
-              state: "",
-              zip: "",
-              emergencyContactName: "",
-              emergencyContactRelationship: "",
-              emergencyContactPhone: "",
-            },
-            dischargeInfo: {
-              dischargingFacility: "",
-              dischargingFacilityPhone: "",
-              facilityAddress: "",
-              facilityFloor: "",
-              facilityCity: "",
-              facilityState: "",
-              facilityZip: "",
-              medicalRecordNumber: "",
-              dateOfAdmission: "",
-              plannedDischargeDate: "",
-              dischargedTo: "",
-              dischargeAddress: "",
-              dischargeApartment: "",
-              dischargeCity: "",
-              dischargeState: "",
-              dischargeZip: "",
-              dischargePhone: "",
-              travelOutsideNYC: false,
-              travelDateDestination: "",
-            },
-            followUp: {
-              appointmentDate: "",
-              physicianName: "",
-              physicianPhone: "",
-              physicianCell: "",
-              physicianAddress: "",
-              physicianCity: "",
-              physicianState: "",
-              physicianZip: "",
-              barriersToAdherence: [],
-              physicalDisability: "",
-              medicalCondition: "",
-              substanceUse: "",
-              mentalDisorder: "",
-              otherBarriers: "",
-            },
-            labResults: {
-              smear1Date: "",
-              smear1Source: "",
-              smear1Result: "",
-              smear1Grade: "",
-              smear2Date: "",
-              smear2Source: "",
-              smear2Result: "",
-              smear2Grade: "",
-              smear3Date: "",
-              smear3Source: "",
-              smear3Result: "",
-              smear3Grade: "",
-            },
-            treatmentInfo: {
-              therapyInitiatedDate: "",
-              therapyInterrupted: false,
-              interruptionReason: "",
-              medications: {
-                inh: { prescribed: false, dosage: "" },
-                rif: { prescribed: false, dosage: "" },
-                pza: { prescribed: false, dosage: "" },
-                emb: { prescribed: false, dosage: "" },
-                sm: { prescribed: false, dosage: "" },
-                vitaminB6: { prescribed: false, dosage: "" },
-                injectables: { prescribed: false, type: "" },
-                other: { prescribed: false, type: "" },
-              },
-              frequency: "",
-              centralLineInserted: false,
-              daysOfMedicationSupplied: "",
-              patientAgreedToDOT: false,
-              formFilledByName: "",
-              formFilledDate: "",
-              responsiblePhysicianName: "",
-              physicianLicenseNumber: "",
-              physicianPhone: "",
-            },
-          });
-        }, 3000);
       }
     } catch (error) {
       console.error("Error submitting discharge:", error);
+      alert("Failed to submit. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value, type, checked } = e.target;
-    const [section, field] = name.split('.');
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
     
     setFormData(prev => ({
       ...prev,
-      [section]: {
-        ...prev[section as keyof PatientInfo],
-        [field]: type === 'checkbox' ? checked : value,
-      },
+      [name]: type === 'checkbox' ? checked : value,
     }));
   };
 
-  const handleNestedChange = (section: keyof PatientInfo, field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [section]: {
-        ...prev[section],
-        [field]: value,
-      },
-    }));
+  const nextStep = () => {
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(currentStep + 1);
+    }
   };
 
-  const handleMedicationChange = (medication: string, field: 'prescribed' | 'dosage' | 'type', value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      treatmentInfo: {
-        ...prev.treatmentInfo,
-        medications: {
-          ...prev.treatmentInfo.medications,
-          [medication]: {
-            ...prev.treatmentInfo.medications[medication as keyof typeof prev.treatmentInfo.medications],
-            [field]: value,
-          },
-        },
-      },
-    }));
-  };
-
-  const handleBarrierChange = (barrier: string, checked: boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      followUp: {
-        ...prev.followUp,
-        barriersToAdherence: checked
-          ? [...prev.followUp.barriersToAdherence, barrier]
-          : prev.followUp.barriersToAdherence.filter(b => b !== barrier),
-      },
-    }));
+  const prevStep = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+    }
   };
 
   if (submitted) {
     return (
       <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
+        initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        className="text-center py-12"
+        className="text-center py-20"
       >
-        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-        </div>
-        <h3 className="text-xl font-semibold text-gray-900 mb-2">Discharge Workflow Initiated!</h3>
-        <p className="text-gray-600">Our AI agents are coordinating shelter placement, transport, and social worker assignment.</p>
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+          className="inline-flex items-center justify-center w-24 h-24 rounded-full mb-6"
+          style={{
+            background: 'linear-gradient(135deg, #2D9F7E, #3DB896)',
+            boxShadow: '0 8px 32px rgba(45, 159, 126, 0.3)'
+          }}
+        >
+          <CheckCircle className="w-12 h-12 text-white" />
+        </motion.div>
+        <h3 
+          className="text-3xl font-bold mb-4"
+          style={{ fontFamily: 'Crimson Pro, serif', color: '#1A1D1E' }}
+        >
+          Discharge Coordination Initiated!
+        </h3>
+        <p className="text-lg mb-6" style={{ color: '#6B7575' }}>
+          Our AI agents are coordinating shelter, transport, resources, and aftercare services.
+        </p>
+        <motion.div
+          animate={{ scale: [1, 1.05, 1] }}
+          transition={{ duration: 2, repeat: Infinity }}
+          className="inline-flex items-center space-x-2 px-6 py-3 rounded-xl"
+          style={{
+            background: 'rgba(13, 115, 119, 0.08)',
+            color: '#0D7377'
+          }}
+        >
+          <Sparkles className="w-5 h-5" />
+          <span className="font-medium">Multi-Agent Coordination in Progress</span>
+        </motion.div>
       </motion.div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">Hospital Discharge Approval Request Form</h2>
-        <p className="text-gray-600">Complete this form in entirety to initiate the CareLink coordination workflow</p>
+    <div className="max-w-5xl mx-auto">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-center mb-12"
+      >
+        <div className="flex items-center justify-center space-x-3 mb-4">
+          <Heart className="w-8 h-8 text-[#D17A5C]" />
+          <h2 
+            className="text-4xl font-bold"
+            style={{ fontFamily: 'Crimson Pro, serif', color: '#1A1D1E' }}
+          >
+            Homeless Patient Discharge
+          </h2>
+        </div>
+        <p className="text-lg" style={{ color: '#6B7575' }}>
+          Coordinating accessible aftercare for patients experiencing homelessness
+        </p>
+      </motion.div>
+
+      {/* Progress Steps */}
+      <div className="mb-12">
+        <div className="flex items-center justify-between">
+          {steps.map((step, index) => {
+            const Icon = step.icon;
+            const isActive = currentStep === index;
+            const isCompleted = currentStep > index;
+
+            return (
+              <React.Fragment key={step.id}>
+                <motion.div
+                  className="flex flex-col items-center cursor-pointer group"
+                  onClick={() => setCurrentStep(index)}
+                  whileHover={{ scale: 1.05 }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <div
+                    className="relative w-14 h-14 rounded-2xl flex items-center justify-center mb-2 transition-all duration-300"
+                    style={{
+                      background: isActive || isCompleted 
+                        ? `linear-gradient(135deg, ${step.color}, ${step.color}dd)`
+                        : 'rgba(224, 213, 199, 0.3)',
+                      border: `2px solid ${isActive || isCompleted ? step.color : '#E0D5C7'}`,
+                      boxShadow: isActive ? `0 8px 24px ${step.color}40` : 'none'
+                    }}
+                  >
+                    {isCompleted ? (
+                      <CheckCircle className="w-6 h-6 text-white" />
+                    ) : (
+                      <Icon className={`w-6 h-6 ${isActive || isCompleted ? 'text-white' : 'text-[#6B7575]'}`} />
+                    )}
+                    
+                    {isActive && (
+                      <motion.div
+                        className="absolute inset-0 rounded-2xl"
+                        style={{ border: `2px solid ${step.color}` }}
+                        animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0, 0.5] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                      />
+                    )}
+                  </div>
+                  <span 
+                    className="text-xs font-medium text-center max-w-[80px]"
+                    style={{ color: isActive || isCompleted ? step.color : '#6B7575' }}
+                  >
+                    {step.title}
+                  </span>
+                </motion.div>
+                
+                {index < steps.length - 1 && (
+                  <div 
+                    className="flex-1 h-0.5 mx-2 transition-all duration-500"
+                    style={{
+                      background: isCompleted 
+                        ? `linear-gradient(90deg, ${steps[index].color}, ${steps[index + 1].color})`
+                        : '#E0D5C7'
+                    }}
+                  />
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Section A: Patient Contact Information */}
-        <div className="bg-white p-6 rounded-lg shadow-md border">
-          <h3 className="text-xl font-semibold text-gray-900 flex items-center mb-6">
-            <User className="w-6 h-6 mr-3 text-blue-500" />
-            Section A: Patient Contact Information
-          </h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Patient Name</label>
-              <input
-                type="text"
-                name="contactInfo.name"
-                value={formData.contactInfo.name}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter patient's full name"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tel. # (1)</label>
-              <input
-                type="tel"
-                name="contactInfo.phone1"
-                value={formData.contactInfo.phone1}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="(   )   -"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tel. # (2)</label>
-              <input
-                type="tel"
-                name="contactInfo.phone2"
-                value={formData.contactInfo.phone2}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="(   )   -"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">DOB</label>
-              <input
-                type="date"
-                name="contactInfo.dateOfBirth"
-                value={formData.contactInfo.dateOfBirth}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-              <input
-                type="text"
-                name="contactInfo.address"
-                value={formData.contactInfo.address}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Street address"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Apt.</label>
-              <input
-                type="text"
-                name="contactInfo.apartment"
-                value={formData.contactInfo.apartment}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Apt/Unit"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-              <input
-                type="text"
-                name="contactInfo.city"
-                value={formData.contactInfo.city}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="City"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
-              <input
-                type="text"
-                name="contactInfo.state"
-                value={formData.contactInfo.state}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="State"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Zip</label>
-              <input
-                type="text"
-                name="contactInfo.zip"
-                value={formData.contactInfo.zip}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="ZIP code"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Contact Name</label>
-              <input
-                type="text"
-                name="contactInfo.emergencyContactName"
-                value={formData.contactInfo.emergencyContactName}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Emergency contact name"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Relationship to Patient</label>
-              <input
-                type="text"
-                name="contactInfo.emergencyContactRelationship"
-                value={formData.contactInfo.emergencyContactRelationship}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="e.g., Spouse, Parent, Sibling"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Contact Tel. #</label>
-              <input
-                type="tel"
-                name="contactInfo.emergencyContactPhone"
-                value={formData.contactInfo.emergencyContactPhone}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="(   )   -"
-              />
-            </div>
+      {/* Form Content */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentStep}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          transition={{ duration: 0.3 }}
+          className="rounded-3xl p-10 mb-8"
+          style={{
+            background: 'rgba(255, 255, 255, 0.9)',
+            border: '1px solid #E0D5C7',
+            boxShadow: '0 4px 16px rgba(13, 115, 119, 0.08)',
+            minHeight: '500px'
+          }}
+        >
+          {/* Step Content Header */}
+          <div className="mb-8">
+            <h3 
+              className="text-2xl font-semibold mb-2"
+              style={{ fontFamily: 'Crimson Pro, serif', color: '#1A1D1E' }}
+            >
+              {steps[currentStep].title}
+            </h3>
+            <p style={{ color: '#6B7575' }}>
+              {steps[currentStep].description}
+            </p>
           </div>
-        </div>
 
-        {/* Section B: Discharge Information */}
-        <div className="bg-white p-6 rounded-lg shadow-md border">
-          <h3 className="text-xl font-semibold text-gray-900 flex items-center mb-6">
-            <Building className="w-6 h-6 mr-3 text-green-500" />
-            Section B: Discharge Information
-          </h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Discharging Facility</label>
-              <input
-                type="text"
-                name="dischargeInfo.dischargingFacility"
-                value={formData.dischargeInfo.dischargingFacility}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Hospital name"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Discharging Facility Tel. #</label>
-              <input
-                type="tel"
-                name="dischargeInfo.dischargingFacilityPhone"
-                value={formData.dischargeInfo.dischargingFacilityPhone}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="(   )   -"
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-              <input
-                type="text"
-                name="dischargeInfo.facilityAddress"
-                value={formData.dischargeInfo.facilityAddress}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Facility address"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Fl.</label>
-              <input
-                type="text"
-                name="dischargeInfo.facilityFloor"
-                value={formData.dischargeInfo.facilityFloor}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Floor"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-              <input
-                type="text"
-                name="dischargeInfo.facilityCity"
-                value={formData.dischargeInfo.facilityCity}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="City"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
-              <input
-                type="text"
-                name="dischargeInfo.facilityState"
-                value={formData.dischargeInfo.facilityState}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="State"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Zip</label>
-              <input
-                type="text"
-                name="dischargeInfo.facilityZip"
-                value={formData.dischargeInfo.facilityZip}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="ZIP code"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Patient Medical Record #</label>
-              <input
-                type="text"
-                name="dischargeInfo.medicalRecordNumber"
-                value={formData.dischargeInfo.medicalRecordNumber}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Medical record number"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Date of Admission</label>
-              <input
-                type="date"
-                name="dischargeInfo.dateOfAdmission"
-                value={formData.dischargeInfo.dateOfAdmission}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Planned Discharge Date</label>
-              <input
-                type="date"
-                name="dischargeInfo.plannedDischargeDate"
-                value={formData.dischargeInfo.plannedDischargeDate}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            <div className="md:col-span-3">
-              <label className="block text-sm font-medium text-gray-700 mb-3">Discharged To</label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="dischargeInfo.dischargedTo"
-                    value="home"
-                    checked={formData.dischargeInfo.dischargedTo === "home"}
-                    onChange={handleChange}
-                    className="mr-2"
-                  />
-                  Home
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="dischargeInfo.dischargedTo"
-                    value="shelter"
-                    checked={formData.dischargeInfo.dischargedTo === "shelter"}
-                    onChange={handleChange}
-                    className="mr-2"
-                  />
-                  Shelter
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="dischargeInfo.dischargedTo"
-                    value="skilled_nursing"
-                    checked={formData.dischargeInfo.dischargedTo === "skilled_nursing"}
-                    onChange={handleChange}
-                    className="mr-2"
-                  />
-                  Skilled Nursing Facility
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="dischargeInfo.dischargedTo"
-                    value="jail_prison"
-                    checked={formData.dischargeInfo.dischargedTo === "jail_prison"}
-                    onChange={handleChange}
-                    className="mr-2"
-                  />
-                  Jail/Prison
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="dischargeInfo.dischargedTo"
-                    value="residential"
-                    checked={formData.dischargeInfo.dischargedTo === "residential"}
-                    onChange={handleChange}
-                    className="mr-2"
-                  />
-                  Residential Facility
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="dischargeInfo.dischargedTo"
-                    value="other"
-                    checked={formData.dischargeInfo.dischargedTo === "other"}
-                    onChange={handleChange}
-                    className="mr-2"
-                  />
-                  Other Facility
-                </label>
+          {/* Step 0: Document Upload */}
+          {currentStep === 0 && (
+            <div className="space-y-6">
+              <div 
+                className="p-6 rounded-2xl mb-6"
+                style={{
+                  background: 'rgba(139, 92, 246, 0.05)',
+                  border: '1px solid #E0D5C7'
+                }}
+              >
+                <h4 className="text-lg font-semibold mb-3" style={{ fontFamily: 'Crimson Pro, serif', color: '#8B5CF6' }}>
+                  💡 Upload First, Then Review
+                </h4>
+                <p className="text-sm mb-3" style={{ color: '#6B7575' }}>
+                  Upload discharge documents first to automatically populate the form. You can then review and fill in any missing information in the following steps.
+                </p>
+                <div className="grid grid-cols-2 gap-3 text-sm" style={{ color: '#6B7575' }}>
+                  <div>
+                    <strong>• Discharge Summary</strong> - Patient info, diagnosis, dates
+                  </div>
+                  <div>
+                    <strong>• Medication List</strong> - Prescriptions and dosages
+                  </div>
+                  <div>
+                    <strong>• Referral Forms</strong> - Agency details, consent status
+                  </div>
+                  <div>
+                    <strong>• Clinical Notes</strong> - Medical stability, treatment
+                  </div>
+                  <div>
+                    <strong>• Transport Voucher</strong> - Transportation arrangements
+                  </div>
+                  <div>
+                    <strong>• Consent Forms</strong> - Release authorization
+                  </div>
+                </div>
               </div>
-            </div>
 
-            <div className="md:col-span-3">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Name of Facility</label>
-              <input
-                type="text"
-                name="dischargeInfo.dischargeAddress"
-                value={formData.dischargeInfo.dischargeAddress}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Facility name"
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-              <input
-                type="text"
-                name="dischargeInfo.dischargeAddress"
-                value={formData.dischargeInfo.dischargeAddress}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Facility address"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Apt./Fl.</label>
-              <input
-                type="text"
-                name="dischargeInfo.dischargeApartment"
-                value={formData.dischargeInfo.dischargeApartment}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Apt/Floor"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-              <input
-                type="text"
-                name="dischargeInfo.dischargeCity"
-                value={formData.dischargeInfo.dischargeCity}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="City"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
-              <input
-                type="text"
-                name="dischargeInfo.dischargeState"
-                value={formData.dischargeInfo.dischargeState}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="State"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Zip</label>
-              <input
-                type="text"
-                name="dischargeInfo.dischargeZip"
-                value={formData.dischargeInfo.dischargeZip}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="ZIP code"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tel. #</label>
-              <input
-                type="tel"
-                name="dischargeInfo.dischargePhone"
-                value={formData.dischargeInfo.dischargePhone}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="(   )   -"
-              />
-            </div>
-
-            <div className="md:col-span-3">
-              <label className="block text-sm font-medium text-gray-700 mb-3">Is patient scheduled to travel outside of NYC?</label>
-              <div className="flex space-x-4">
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="dischargeInfo.travelOutsideNYC"
-                    value="true"
-                    checked={formData.dischargeInfo.travelOutsideNYC === true}
-                    onChange={(e) => handleNestedChange('dischargeInfo', 'travelOutsideNYC', true)}
-                    className="mr-2"
-                  />
-                  Yes
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="dischargeInfo.travelOutsideNYC"
-                    value="false"
-                    checked={formData.dischargeInfo.travelOutsideNYC === false}
-                    onChange={(e) => handleNestedChange('dischargeInfo', 'travelOutsideNYC', false)}
-                    className="mr-2"
-                  />
-                  No
-                </label>
+              {/* File Upload Area */}
+              <div
+                className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all duration-300 ${
+                  dragActive
+                    ? "border-[#8B5CF6] bg-[#8B5CF6]/5"
+                    : "border-[#E0D5C7] hover:border-[#8B5CF6]/50"
+                }`}
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+              >
+                <Upload className="w-16 h-16 mx-auto mb-4 text-[#8B5CF6]" />
+                <p className="text-xl font-semibold mb-2" style={{ fontFamily: 'Crimson Pro, serif', color: '#1A1D1E' }}>
+                  Drop PDF files here
+                </p>
+                <p className="mb-6" style={{ color: '#6B7575' }}>
+                  or click to browse
+                </p>
+                <motion.button
+                  type="button"
+                  onClick={openFileDialog}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="px-8 py-3 rounded-xl text-white font-medium"
+                  style={{
+                    background: 'linear-gradient(135deg, #8B5CF6, #A78BFA)',
+                    boxShadow: '0 4px 16px rgba(139, 92, 246, 0.3)'
+                  }}
+                >
+                  Choose Files
+                </motion.button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept=".pdf"
+                  onChange={(e) => handleFileUpload(e.target.files)}
+                  className="hidden"
+                />
               </div>
-              {formData.dischargeInfo.travelOutsideNYC && (
-                <div className="mt-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">If yes, specify date/destination</label>
-                  <input
-                    type="text"
-                    name="dischargeInfo.travelDateDestination"
-                    value={formData.dischargeInfo.travelDateDestination}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Date and destination"
-                  />
+
+              {/* Uploaded Files List */}
+              {uploadedFiles.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="font-semibold" style={{ color: '#1A1D1E' }}>
+                    Uploaded Files ({uploadedFiles.length})
+                  </h4>
+                  {uploadedFiles.map((file, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="flex items-center justify-between p-4 rounded-xl"
+                      style={{
+                        background: 'rgba(139, 92, 246, 0.05)',
+                        border: '1px solid #E0D5C7'
+                      }}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <File className="w-6 h-6 text-[#8B5CF6]" />
+                        <div>
+                          <p className="font-medium" style={{ color: '#1A1D1E' }}>
+                            {file.name}
+                          </p>
+                          <p className="text-sm" style={{ color: '#6B7575' }}>
+                            {(file.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        </div>
+                      </div>
+                      <motion.button
+                        type="button"
+                        onClick={() => removeFile(index)}
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        className="p-2 rounded-lg hover:bg-white/50 transition-colors"
+                      >
+                        <X className="w-5 h-5" style={{ color: '#C85C5C' }} />
+                      </motion.button>
+                    </motion.div>
+                  ))}
+
+                  {/* Process PDF Button */}
+                  <motion.button
+                    type="button"
+                    onClick={processPDFFiles}
+                    disabled={isSubmitting}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full px-6 py-4 rounded-xl text-white font-semibold flex items-center justify-center space-x-2"
+                    style={{
+                      background: 'linear-gradient(135deg, #8B5CF6, #A78BFA)',
+                      boxShadow: '0 4px 16px rgba(139, 92, 246, 0.3)',
+                      opacity: isSubmitting ? 0.6 : 1
+                    }}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <motion.div
+                          className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                        />
+                        <span>Processing PDFs...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-5 h-5" />
+                        <span>Process PDFs & Autofill Form</span>
+                      </>
+                    )}
+                  </motion.button>
+                  <p className="text-center text-sm" style={{ color: '#6B7575' }}>
+                    Click "Next" after processing to review autofilled information
+                  </p>
+                </div>
+              )}
+
+              {uploadedFiles.length === 0 && (
+                <div className="text-center">
+                  <p className="text-sm" style={{ color: '#6B7575' }}>
+                    💡 You can skip this step and fill the form manually, or upload documents later
+                  </p>
                 </div>
               )}
             </div>
-          </div>
+          )}
+
+          {/* Step 1: Patient and Admission Information */}
+          {currentStep === 1 && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-semibold mb-2" style={{ color: '#1A1D1E' }}>
+                    Patient Name (or "Unknown") *
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-3"
+                    placeholder="Enter patient's name or 'Unknown'"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: '#1A1D1E' }}>
+                    Date of Birth (or approximate) *
+                  </label>
+                  <input
+                    type="date"
+                    name="dateOfBirth"
+                    value={formData.dateOfBirth}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: '#1A1D1E' }}>
+                    Medical Record Number *
+                  </label>
+                  <input
+                    type="text"
+                    name="medicalRecordNumber"
+                    value={formData.medicalRecordNumber}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-3"
+                    placeholder="MRN"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: '#1A1D1E' }}>
+                    Gender (optional)
+                  </label>
+                  <select
+                    name="gender"
+                    value={formData.gender}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3"
+                  >
+                    <option value="">Select gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="non-binary">Non-binary</option>
+                    <option value="other">Other</option>
+                    <option value="decline">Prefer not to say</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: '#1A1D1E' }}>
+                    Housing Status *
+                  </label>
+                  <select
+                    name="housingStatus"
+                    value={formData.housingStatus}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-3"
+                  >
+                    <option value="homeless">Homeless</option>
+                    <option value="housed">Housed</option>
+                    <option value="unstable">Unstable Housing</option>
+                  </select>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-semibold mb-2" style={{ color: '#1A1D1E' }}>
+                    Principal Residence
+                  </label>
+                  <input
+                    type="text"
+                    name="principalResidence"
+                    value={formData.principalResidence}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3"
+                    placeholder="Shelter name, encampment location, or 'Undomiciled'"
+                  />
+                  <p className="text-xs mt-1" style={{ color: '#6B7575' }}>
+                    Examples: "Mission Shelter", "Tent on 5th Street", "Undomiciled"
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: Medical Information */}
+          {currentStep === 2 && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: '#1A1D1E' }}>
+                    Primary Diagnosis and Reason for Admission *
+                  </label>
+                  <textarea
+                    name="primaryDiagnosis"
+                    value={formData.primaryDiagnosis}
+                    onChange={handleChange}
+                    required
+                    rows={3}
+                    className="w-full px-4 py-3"
+                    placeholder="Primary diagnosis, presenting condition, reason for hospitalization"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: '#1A1D1E' }}>
+                    Summary of Treatment/Course in Hospital *
+                  </label>
+                  <textarea
+                    name="treatmentSummary"
+                    value={formData.treatmentSummary}
+                    onChange={handleChange}
+                    required
+                    rows={4}
+                    className="w-full px-4 py-3"
+                    placeholder="Brief summary of hospital stay, treatments received, procedures performed"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: '#1A1D1E' }}>
+                    Date and Time of Discharge *
+                  </label>
+                  <input
+                    type="datetime-local"
+                    name="dischargeDateTime"
+                    value={formData.dischargeDateTime}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-3"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: '#1A1D1E' }}>
+                    Medically Stable for Discharge? *
+                  </label>
+                  <div className="flex items-center space-x-6">
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="medicallyStable"
+                        checked={formData.medicallyStable === true}
+                        onChange={() => setFormData(prev => ({ ...prev, medicallyStable: true }))}
+                        className="w-5 h-5"
+                      />
+                      <span>Yes - Patient is medically stable</span>
+                    </label>
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="medicallyStable"
+                        checked={formData.medicallyStable === false}
+                        onChange={() => setFormData(prev => ({ ...prev, medicallyStable: false }))}
+                        className="w-5 h-5"
+                      />
+                      <span>No - Additional care needed</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Post-Discharge Planning */}
+          {currentStep === 3 && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-semibold mb-2" style={{ color: '#1A1D1E' }}>
+                    Planned Destination *
+                  </label>
+                  <select
+                    name="plannedDestination"
+                    value={formData.plannedDestination}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-3"
+                  >
+                    <option value="">Select destination</option>
+                    <option value="shelter">Shelter</option>
+                    <option value="social_services">Social Services Agency</option>
+                    <option value="residence">Private Residence</option>
+                    <option value="tbd">To Be Determined (AI will coordinate)</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: '#1A1D1E' }}>
+                    Accepting Agency/Shelter Name
+                    <span className="ml-2 text-xs font-normal px-2 py-1 rounded" style={{ background: 'rgba(45, 159, 126, 0.1)', color: '#2D9F7E' }}>
+                      🤖 AI Agent will find if blank
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    name="acceptingAgencyName"
+                    value={formData.acceptingAgencyName}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3"
+                    placeholder="Leave blank for AI Shelter Agent to find best match"
+                  />
+                  <p className="text-xs mt-1" style={{ color: '#6B7575' }}>
+                    Shelter Agent will query SF shelter database via Bright Data and verify availability
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: '#1A1D1E' }}>
+                    Agency Contact
+                    <span className="ml-2 text-xs font-normal px-2 py-1 rounded" style={{ background: 'rgba(45, 159, 126, 0.1)', color: '#2D9F7E' }}>
+                      🤖 AI coordinated
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    name="acceptingAgencyContact"
+                    value={formData.acceptingAgencyContact}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3"
+                    placeholder="Will be provided by Shelter Agent"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-semibold mb-2" style={{ color: '#1A1D1E' }}>
+                    Interim Location (if shelter not yet assigned)
+                    <span className="ml-2 text-xs font-normal px-2 py-1 rounded" style={{ background: 'rgba(45, 159, 126, 0.1)', color: '#2D9F7E' }}>
+                      🤖 AI coordinated
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    name="interimLocation"
+                    value={formData.interimLocation}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3"
+                    placeholder="Leave blank - Coordinator Agent will arrange safe interim location"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: '#1A1D1E' }}>
+                    Transportation Arranged
+                    <span className="ml-2 text-xs font-normal px-2 py-1 rounded" style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3B82F6' }}>
+                      🤖 Transport Agent
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    name="transportationArranged"
+                    value={formData.transportationArranged}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3"
+                    placeholder="Leave blank - Transport Agent will schedule wheelchair-accessible vehicle"
+                  />
+                  <p className="text-xs mt-1" style={{ color: '#6B7575' }}>
+                    Transport Agent will find providers, schedule pickup, and assign driver via Vapi
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: '#1A1D1E' }}>
+                    Follow-up Clinic/Care Referral
+                    <span className="ml-2 text-xs font-normal px-2 py-1 rounded" style={{ background: 'rgba(232, 168, 124, 0.1)', color: '#E8A87C' }}>
+                      🤖 Resource Agent
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    name="followUpClinic"
+                    value={formData.followUpClinic}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3"
+                    placeholder="Leave blank - Resource Agent will coordinate follow-up care"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 4: Resource Provision */}
+          {currentStep === 4 && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: '#1A1D1E' }}>
+                    Was meal offered prior to discharge? *
+                  </label>
+                  <select
+                    name="mealOffered"
+                    value={formData.mealOffered}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-3"
+                  >
+                    <option value="">Select option</option>
+                    <option value="yes">Yes - Meal provided</option>
+                    <option value="no">No - Not offered</option>
+                    <option value="declined">Declined by patient</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: '#1A1D1E' }}>
+                    Weather-appropriate clothing provided? *
+                  </label>
+                  <select
+                    name="clothingProvided"
+                    value={formData.clothingProvided}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-3"
+                  >
+                    <option value="">Select option</option>
+                    <option value="yes">Yes - Clothing provided</option>
+                    <option value="no">No - Not provided</option>
+                    <option value="not_needed">Not needed</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: '#1A1D1E' }}>
+                    Discharge medication provided? *
+                  </label>
+                  <select
+                    name="dischargeMedication"
+                    value={formData.dischargeMedication}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-3"
+                  >
+                    <option value="">Select option</option>
+                    <option value="yes">Yes - Medication provided</option>
+                    <option value="no">No - Prescription given</option>
+                    <option value="na">N/A - No medication needed</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: '#1A1D1E' }}>
+                    Medication List/Prescriptions
+                  </label>
+                  <textarea
+                    name="medicationList"
+                    value={formData.medicationList}
+                    onChange={handleChange}
+                    rows={3}
+                    className="w-full px-4 py-3"
+                    placeholder="List medications provided or prescribed with dosages"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: '#1A1D1E' }}>
+                    Infectious disease screening performed? *
+                  </label>
+                  <select
+                    name="infectiousDiseaseScreening"
+                    value={formData.infectiousDiseaseScreening}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-3"
+                  >
+                    <option value="">Select option</option>
+                    <option value="yes">Yes - Screening completed</option>
+                    <option value="no">No - Not performed</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: '#1A1D1E' }}>
+                    Insurance screening/enrollment done? *
+                  </label>
+                  <select
+                    name="insuranceScreening"
+                    value={formData.insuranceScreening}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-3"
+                  >
+                    <option value="">Select option</option>
+                    <option value="yes">Yes - Screening completed</option>
+                    <option value="no">No - Not performed</option>
+                  </select>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-semibold mb-2" style={{ color: '#1A1D1E' }}>
+                    Social Worker/Case Manager Assigned
+                    <span className="ml-2 text-xs font-normal px-2 py-1 rounded" style={{ background: 'rgba(209, 122, 92, 0.1)', color: '#D17A5C' }}>
+                      🤖 Social Worker Agent
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    name="socialWorkerAssigned"
+                    value={formData.socialWorkerAssigned}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3"
+                    placeholder="Leave blank - Social Worker Agent will assign based on patient needs"
+                  />
+                  <p className="text-xs mt-1" style={{ color: '#6B7575' }}>
+                    Agent will match patient with appropriate case manager and provide contact info
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 5: Documentation and Consent */}
+          {currentStep === 5 && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: '#1A1D1E' }}>
+                    Consent for Release/Referral *
+                  </label>
+                  <select
+                    name="consentForReferral"
+                    value={formData.consentForReferral}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-3"
+                  >
+                    <option value="">Select consent type</option>
+                    <option value="digital">Digital/Electronic consent</option>
+                    <option value="written">Written/Scanned consent</option>
+                    <option value="verbal">Verbal consent (documented)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: '#1A1D1E' }}>
+                    Intake Date *
+                  </label>
+                  <input
+                    type="date"
+                    name="intakeDate"
+                    value={formData.intakeDate}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-3"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-semibold mb-2" style={{ color: '#1A1D1E' }}>
+                    Staff Name Completing Intake *
+                  </label>
+                  <input
+                    type="text"
+                    name="staffName"
+                    value={formData.staffName}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-3"
+                    placeholder="Your full name"
+                  />
+                </div>
+              </div>
+
+              <div 
+                className="mt-8 p-6 rounded-2xl"
+                style={{
+                  background: 'rgba(13, 115, 119, 0.05)',
+                  border: '1px solid #E0D5C7'
+                }}
+              >
+                <h4 className="text-lg font-semibold mb-3" style={{ fontFamily: 'Crimson Pro, serif', color: '#0D7377' }}>
+                  🤖 AI Agent Workflow Summary
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm" style={{ color: '#6B7575' }}>
+                  <div className="flex items-start space-x-2">
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center" style={{ background: 'rgba(45, 159, 126, 0.2)' }}>
+                      <Home className="w-3 h-3" style={{ color: '#2D9F7E' }} />
+                    </div>
+                    <div>
+                      <strong>Shelter Agent:</strong> Queries SF shelter database, verifies bed availability via Vapi calls
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center" style={{ background: 'rgba(59, 130, 246, 0.2)' }}>
+                      <Truck className="w-3 h-3" style={{ color: '#3B82F6' }} />
+                    </div>
+                    <div>
+                      <strong>Transport Agent:</strong> Finds wheelchair-accessible transport, schedules pickup & assigns driver
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center" style={{ background: 'rgba(209, 122, 92, 0.2)' }}>
+                      <Users className="w-3 h-3" style={{ color: '#D17A5C' }} />
+                    </div>
+                    <div>
+                      <strong>Social Worker Agent:</strong> Assigns case manager based on patient needs and availability
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center" style={{ background: 'rgba(232, 168, 124, 0.2)' }}>
+                      <Package className="w-3 h-3" style={{ color: '#E8A87C' }} />
+                    </div>
+                    <div>
+                      <strong>Resource Agent:</strong> Coordinates meals, clothing, hygiene items & follow-up care
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs mt-4" style={{ color: '#6B7575' }}>
+                  💡 Leave AI-coordinated fields blank and the agents will handle them automatically after submission
+                </p>
+              </div>
+            </div>
+          )}
+
+        </motion.div>
+      </AnimatePresence>
+
+      {/* Navigation Buttons */}
+      <div className="flex items-center justify-between">
+        <motion.button
+          type="button"
+          onClick={prevStep}
+          disabled={currentStep === 0}
+          whileHover={currentStep > 0 ? { scale: 1.05, x: -5 } : {}}
+          whileTap={currentStep > 0 ? { scale: 0.95 } : {}}
+          className="flex items-center space-x-2 px-6 py-3 rounded-xl font-medium transition-all"
+          style={{
+            background: currentStep === 0 ? 'rgba(224, 213, 199, 0.3)' : 'rgba(255, 255, 255, 0.9)',
+            border: '1px solid #E0D5C7',
+            color: currentStep === 0 ? '#6B7575' : '#1A1D1E',
+            opacity: currentStep === 0 ? 0.5 : 1,
+            cursor: currentStep === 0 ? 'not-allowed' : 'pointer'
+          }}
+        >
+          <ArrowLeft className="w-5 h-5" />
+          <span>Previous</span>
+        </motion.button>
+
+        <div className="flex items-center space-x-2" style={{ color: '#6B7575' }}>
+          <span className="font-medium">
+            Step {currentStep + 1} of {steps.length}
+          </span>
         </div>
 
-        {/* Section C: Patient Follow-Up Appointment */}
-        <div className="bg-white p-6 rounded-lg shadow-md border">
-          <h3 className="text-xl font-semibold text-gray-900 flex items-center mb-6">
-            <Calendar className="w-6 h-6 mr-3 text-purple-500" />
-            Section C: Patient Follow-Up Appointment
-          </h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Patient Follow-up Appointment Date</label>
-              <input
-                type="date"
-                name="followUp.appointmentDate"
-                value={formData.followUp.appointmentDate}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Physician Assuming Care</label>
-              <input
-                type="text"
-                name="followUp.physicianName"
-                value={formData.followUp.physicianName}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Physician name"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tel. #</label>
-              <input
-                type="tel"
-                name="followUp.physicianPhone"
-                value={formData.followUp.physicianPhone}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="(   )   -"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Cell. #</label>
-              <input
-                type="tel"
-                name="followUp.physicianCell"
-                value={formData.followUp.physicianCell}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="(   )   -"
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-              <input
-                type="text"
-                name="followUp.physicianAddress"
-                value={formData.followUp.physicianAddress}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Physician address"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-              <input
-                type="text"
-                name="followUp.physicianCity"
-                value={formData.followUp.physicianCity}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="City"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
-              <input
-                type="text"
-                name="followUp.physicianState"
-                value={formData.followUp.physicianState}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="State"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Zip</label>
-              <input
-                type="text"
-                name="followUp.physicianZip"
-                value={formData.followUp.physicianZip}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="ZIP code"
-              />
-            </div>
-
-            <div className="md:col-span-3">
-              <label className="block text-sm font-medium text-gray-700 mb-3">Potential Barriers to TB Therapy Adherence</label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.followUp.barriersToAdherence.includes('none')}
-                    onChange={(e) => handleBarrierChange('none', e.target.checked)}
-                    className="mr-2"
-                  />
-                  None
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.followUp.barriersToAdherence.includes('adverse_reactions')}
-                    onChange={(e) => handleBarrierChange('adverse_reactions', e.target.checked)}
-                    className="mr-2"
-                  />
-                  Adverse Reactions
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.followUp.barriersToAdherence.includes('homelessness')}
-                    onChange={(e) => handleBarrierChange('homelessness', e.target.checked)}
-                    className="mr-2"
-                  />
-                  Homelessness
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.followUp.barriersToAdherence.includes('physical_disability')}
-                    onChange={(e) => handleBarrierChange('physical_disability', e.target.checked)}
-                    className="mr-2"
-                  />
-                  Physical Disability
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.followUp.barriersToAdherence.includes('medical_condition')}
-                    onChange={(e) => handleBarrierChange('medical_condition', e.target.checked)}
-                    className="mr-2"
-                  />
-                  Medical Condition
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.followUp.barriersToAdherence.includes('substance_use')}
-                    onChange={(e) => handleBarrierChange('substance_use', e.target.checked)}
-                    className="mr-2"
-                  />
-                  Substance Use
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.followUp.barriersToAdherence.includes('mental_disorder')}
-                    onChange={(e) => handleBarrierChange('mental_disorder', e.target.checked)}
-                    className="mr-2"
-                  />
-                  Mental Disorder
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.followUp.barriersToAdherence.includes('other')}
-                    onChange={(e) => handleBarrierChange('other', e.target.checked)}
-                    className="mr-2"
-                  />
-                  Other
-                </label>
-              </div>
-            </div>
-
-            {formData.followUp.barriersToAdherence.includes('physical_disability') && (
-              <div className="md:col-span-3">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Physical Disability (specify)</label>
-                <input
-                  type="text"
-                  name="followUp.physicalDisability"
-                  value={formData.followUp.physicalDisability}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Specify physical disability"
-                />
-              </div>
-            )}
-
-            {formData.followUp.barriersToAdherence.includes('medical_condition') && (
-              <div className="md:col-span-3">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Medical Condition (specify)</label>
-                <input
-                  type="text"
-                  name="followUp.medicalCondition"
-                  value={formData.followUp.medicalCondition}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Specify medical condition"
-                />
-              </div>
-            )}
-
-            {formData.followUp.barriersToAdherence.includes('substance_use') && (
-              <div className="md:col-span-3">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Substance Use (specify)</label>
-                <input
-                  type="text"
-                  name="followUp.substanceUse"
-                  value={formData.followUp.substanceUse}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Specify substance use"
-                />
-              </div>
-            )}
-
-            {formData.followUp.barriersToAdherence.includes('mental_disorder') && (
-              <div className="md:col-span-3">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Mental Disorder (specify)</label>
-                <input
-                  type="text"
-                  name="followUp.mentalDisorder"
-                  value={formData.followUp.mentalDisorder}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Specify mental disorder"
-                />
-              </div>
-            )}
-
-            {formData.followUp.barriersToAdherence.includes('other') && (
-              <div className="md:col-span-3">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Other (specify)</label>
-                <input
-                  type="text"
-                  name="followUp.otherBarriers"
-                  value={formData.followUp.otherBarriers}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Specify other barriers"
-                />
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Section D: Laboratory Results */}
-        <div className="bg-white p-6 rounded-lg shadow-md border">
-          <h3 className="text-xl font-semibold text-gray-900 flex items-center mb-6">
-            <TestTube className="w-6 h-6 mr-3 text-red-500" />
-            Section D: Laboratory Results
-          </h3>
-          
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Date of AFB Smear 1</label>
-                <input
-                  type="date"
-                  name="labResults.smear1Date"
-                  value={formData.labResults.smear1Date}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Specimen Source</label>
-                <input
-                  type="text"
-                  name="labResults.smear1Source"
-                  value={formData.labResults.smear1Source}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="e.g., Sputum, BAL"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">AFB Smear Result</label>
-                <div className="flex space-x-4">
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="labResults.smear1Result"
-                      value="positive"
-                      checked={formData.labResults.smear1Result === "positive"}
-                      onChange={handleChange}
-                      className="mr-2"
-                    />
-                    Positive
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="labResults.smear1Result"
-                      value="negative"
-                      checked={formData.labResults.smear1Result === "negative"}
-                      onChange={handleChange}
-                      className="mr-2"
-                    />
-                    Negative
-                  </label>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Grade (if positive)</label>
-                <input
-                  type="text"
-                  name="labResults.smear1Grade"
-                  value={formData.labResults.smear1Grade}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Grade"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Date of AFB Smear 2</label>
-                <input
-                  type="date"
-                  name="labResults.smear2Date"
-                  value={formData.labResults.smear2Date}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Specimen Source</label>
-                <input
-                  type="text"
-                  name="labResults.smear2Source"
-                  value={formData.labResults.smear2Source}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="e.g., Sputum, BAL"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">AFB Smear Result</label>
-                <div className="flex space-x-4">
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="labResults.smear2Result"
-                      value="positive"
-                      checked={formData.labResults.smear2Result === "positive"}
-                      onChange={handleChange}
-                      className="mr-2"
-                    />
-                    Positive
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="labResults.smear2Result"
-                      value="negative"
-                      checked={formData.labResults.smear2Result === "negative"}
-                      onChange={handleChange}
-                      className="mr-2"
-                    />
-                    Negative
-                  </label>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Grade (if positive)</label>
-                <input
-                  type="text"
-                  name="labResults.smear2Grade"
-                  value={formData.labResults.smear2Grade}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Grade"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Date of AFB Smear 3</label>
-                <input
-                  type="date"
-                  name="labResults.smear3Date"
-                  value={formData.labResults.smear3Date}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Specimen Source</label>
-                <input
-                  type="text"
-                  name="labResults.smear3Source"
-                  value={formData.labResults.smear3Source}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="e.g., Sputum, BAL"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">AFB Smear Result</label>
-                <div className="flex space-x-4">
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="labResults.smear3Result"
-                      value="positive"
-                      checked={formData.labResults.smear3Result === "positive"}
-                      onChange={handleChange}
-                      className="mr-2"
-                    />
-                    Positive
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="labResults.smear3Result"
-                      value="negative"
-                      checked={formData.labResults.smear3Result === "negative"}
-                      onChange={handleChange}
-                      className="mr-2"
-                    />
-                    Negative
-                  </label>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Grade (if positive)</label>
-                <input
-                  type="text"
-                  name="labResults.smear3Grade"
-                  value={formData.labResults.smear3Grade}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Grade"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Section E: Treatment Information */}
-        <div className="bg-white p-6 rounded-lg shadow-md border">
-          <h3 className="text-xl font-semibold text-gray-900 flex items-center mb-6">
-            <Pill className="w-6 h-6 mr-3 text-orange-500" />
-            Section E: Treatment Information
-          </h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Date TB Therapy Initiated</label>
-              <input
-                type="date"
-                name="treatmentInfo.therapyInitiatedDate"
-                value={formData.treatmentInfo.therapyInitiatedDate}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-3">Interruption in Therapy?</label>
-              <div className="flex space-x-4">
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="treatmentInfo.therapyInterrupted"
-                    value="true"
-                    checked={formData.treatmentInfo.therapyInterrupted === true}
-                    onChange={(e) => handleNestedChange('treatmentInfo', 'therapyInterrupted', true)}
-                    className="mr-2"
-                  />
-                  Yes
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="treatmentInfo.therapyInterrupted"
-                    value="false"
-                    checked={formData.treatmentInfo.therapyInterrupted === false}
-                    onChange={(e) => handleNestedChange('treatmentInfo', 'therapyInterrupted', false)}
-                    className="mr-2"
-                  />
-                  No
-                </label>
-              </div>
-              {formData.treatmentInfo.therapyInterrupted && (
-                <div className="mt-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Reason and Duration of Interruption</label>
-                  <input
-                    type="text"
-                    name="treatmentInfo.interruptionReason"
-                    value={formData.treatmentInfo.interruptionReason}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Specify reason and duration"
-                  />
-                </div>
-              )}
-            </div>
-
-            <div className="md:col-span-3">
-              <label className="block text-sm font-medium text-gray-700 mb-3">TB Medications at Discharge</label>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={formData.treatmentInfo.medications.inh.prescribed}
-                    onChange={(e) => handleMedicationChange('inh', 'prescribed', e.target.checked)}
-                    className="mr-2"
-                  />
-                  <span>INH</span>
-                  <input
-                    type="text"
-                    value={formData.treatmentInfo.medications.inh.dosage}
-                    onChange={(e) => handleMedicationChange('inh', 'dosage', e.target.value)}
-                    className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
-                    placeholder="mg"
-                  />
-                </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={formData.treatmentInfo.medications.rif.prescribed}
-                    onChange={(e) => handleMedicationChange('rif', 'prescribed', e.target.checked)}
-                    className="mr-2"
-                  />
-                  <span>RIF</span>
-                  <input
-                    type="text"
-                    value={formData.treatmentInfo.medications.rif.dosage}
-                    onChange={(e) => handleMedicationChange('rif', 'dosage', e.target.value)}
-                    className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
-                    placeholder="mg"
-                  />
-                </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={formData.treatmentInfo.medications.pza.prescribed}
-                    onChange={(e) => handleMedicationChange('pza', 'prescribed', e.target.checked)}
-                    className="mr-2"
-                  />
-                  <span>PZA</span>
-                  <input
-                    type="text"
-                    value={formData.treatmentInfo.medications.pza.dosage}
-                    onChange={(e) => handleMedicationChange('pza', 'dosage', e.target.value)}
-                    className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
-                    placeholder="mg"
-                  />
-                </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={formData.treatmentInfo.medications.emb.prescribed}
-                    onChange={(e) => handleMedicationChange('emb', 'prescribed', e.target.checked)}
-                    className="mr-2"
-                  />
-                  <span>EMB</span>
-                  <input
-                    type="text"
-                    value={formData.treatmentInfo.medications.emb.dosage}
-                    onChange={(e) => handleMedicationChange('emb', 'dosage', e.target.value)}
-                    className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
-                    placeholder="mg"
-                  />
-                </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={formData.treatmentInfo.medications.sm.prescribed}
-                    onChange={(e) => handleMedicationChange('sm', 'prescribed', e.target.checked)}
-                    className="mr-2"
-                  />
-                  <span>SM</span>
-                  <input
-                    type="text"
-                    value={formData.treatmentInfo.medications.sm.dosage}
-                    onChange={(e) => handleMedicationChange('sm', 'dosage', e.target.value)}
-                    className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
-                    placeholder="mg"
-                  />
-                </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={formData.treatmentInfo.medications.vitaminB6.prescribed}
-                    onChange={(e) => handleMedicationChange('vitaminB6', 'prescribed', e.target.checked)}
-                    className="mr-2"
-                  />
-                  <span>Vitamin B6</span>
-                  <input
-                    type="text"
-                    value={formData.treatmentInfo.medications.vitaminB6.dosage}
-                    onChange={(e) => handleMedicationChange('vitaminB6', 'dosage', e.target.value)}
-                    className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
-                    placeholder="mg"
-                  />
-                </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={formData.treatmentInfo.medications.injectables.prescribed}
-                    onChange={(e) => handleMedicationChange('injectables', 'prescribed', e.target.checked)}
-                    className="mr-2"
-                  />
-                  <span>Injectables</span>
-                  <input
-                    type="text"
-                    value={formData.treatmentInfo.medications.injectables.type}
-                    onChange={(e) => handleMedicationChange('injectables', 'type', e.target.value)}
-                    className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
-                    placeholder="specify"
-                  />
-                </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={formData.treatmentInfo.medications.other.prescribed}
-                    onChange={(e) => handleMedicationChange('other', 'prescribed', e.target.checked)}
-                    className="mr-2"
-                  />
-                  <span>Other TB Meds</span>
-                  <input
-                    type="text"
-                    value={formData.treatmentInfo.medications.other.type}
-                    onChange={(e) => handleMedicationChange('other', 'type', e.target.value)}
-                    className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
-                    placeholder="specify"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="md:col-span-3">
-              <label className="block text-sm font-medium text-gray-700 mb-3">Frequency</label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="treatmentInfo.frequency"
-                    value="daily"
-                    checked={formData.treatmentInfo.frequency === "daily"}
-                    onChange={handleChange}
-                    className="mr-2"
-                  />
-                  Daily
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="treatmentInfo.frequency"
-                    value="2x_weekly"
-                    checked={formData.treatmentInfo.frequency === "2x_weekly"}
-                    onChange={handleChange}
-                    className="mr-2"
-                  />
-                  2x Weekly
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="treatmentInfo.frequency"
-                    value="3x_weekly"
-                    checked={formData.treatmentInfo.frequency === "3x_weekly"}
-                    onChange={handleChange}
-                    className="mr-2"
-                  />
-                  3x Weekly
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="treatmentInfo.frequency"
-                    value="other"
-                    checked={formData.treatmentInfo.frequency === "other"}
-                    onChange={handleChange}
-                    className="mr-2"
-                  />
-                  Other
-                </label>
-              </div>
-            </div>
-
-            <div className="md:col-span-3">
-              <label className="block text-sm font-medium text-gray-700 mb-3">Was a central line (i.e. PICC) inserted on the patient?</label>
-              <div className="flex space-x-4">
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="treatmentInfo.centralLineInserted"
-                    value="true"
-                    checked={formData.treatmentInfo.centralLineInserted === true}
-                    onChange={(e) => handleNestedChange('treatmentInfo', 'centralLineInserted', true)}
-                    className="mr-2"
-                  />
-                  Yes
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="treatmentInfo.centralLineInserted"
-                    value="false"
-                    checked={formData.treatmentInfo.centralLineInserted === false}
-                    onChange={(e) => handleNestedChange('treatmentInfo', 'centralLineInserted', false)}
-                    className="mr-2"
-                  />
-                  No
-                </label>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Number of Days of Medications Supplied</label>
-              <input
-                type="text"
-                name="treatmentInfo.daysOfMedicationSupplied"
-                value={formData.treatmentInfo.daysOfMedicationSupplied}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Number of days"
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-3">Patient Agreed to DOT?</label>
-              <div className="flex space-x-4">
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="treatmentInfo.patientAgreedToDOT"
-                    value="true"
-                    checked={formData.treatmentInfo.patientAgreedToDOT === true}
-                    onChange={(e) => handleNestedChange('treatmentInfo', 'patientAgreedToDOT', true)}
-                    className="mr-2"
-                  />
-                  Yes
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="treatmentInfo.patientAgreedToDOT"
-                    value="false"
-                    checked={formData.treatmentInfo.patientAgreedToDOT === false}
-                    onChange={(e) => handleNestedChange('treatmentInfo', 'patientAgreedToDOT', false)}
-                    className="mr-2"
-                  />
-                  No
-                </label>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Print Name of Individual Filling Out This Form</label>
-              <input
-                type="text"
-                name="treatmentInfo.formFilledByName"
-                value={formData.treatmentInfo.formFilledByName}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Name"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-              <input
-                type="date"
-                name="treatmentInfo.formFilledDate"
-                value={formData.treatmentInfo.formFilledDate}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Name of Responsible Physician</label>
-              <input
-                type="text"
-                name="treatmentInfo.responsiblePhysicianName"
-                value={formData.treatmentInfo.responsiblePhysicianName}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Physician name"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">License #</label>
-              <input
-                type="text"
-                name="treatmentInfo.physicianLicenseNumber"
-                value={formData.treatmentInfo.physicianLicenseNumber}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="License number"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tel. #</label>
-              <input
-                type="tel"
-                name="treatmentInfo.physicianPhone"
-                value={formData.treatmentInfo.physicianPhone}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="(   )   -"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Submit Button */}
-        <div className="flex justify-center pt-6">
+        {currentStep < steps.length - 1 ? (
           <motion.button
-            type="submit"
+            type="button"
+            onClick={nextStep}
+            whileHover={{ scale: 1.05, x: 5 }}
+            whileTap={{ scale: 0.95 }}
+            className="flex items-center space-x-2 px-6 py-3 rounded-xl font-medium text-white"
+            style={{
+              background: 'linear-gradient(135deg, #0D7377, #14919B)',
+              boxShadow: '0 4px 16px rgba(13, 115, 119, 0.3)'
+            }}
+          >
+            <span>Next</span>
+            <ArrowRight className="w-5 h-5" />
+          </motion.button>
+        ) : (
+          <motion.button
+            type="button"
+            onClick={handleSubmit}
             disabled={isSubmitting}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className={`px-8 py-3 rounded-lg font-semibold text-white transition-all duration-200 ${
-              isSubmitting
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 shadow-lg"
-            }`}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="flex items-center space-x-2 px-8 py-3 rounded-xl font-semibold text-white"
+            style={{
+              background: 'linear-gradient(135deg, #2D9F7E, #3DB896)',
+              boxShadow: '0 4px 16px rgba(45, 159, 126, 0.3)',
+              opacity: isSubmitting ? 0.6 : 1
+            }}
           >
             {isSubmitting ? (
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              <>
+                <motion.div
+                  className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                />
                 <span>Initiating Workflow...</span>
-              </div>
+              </>
             ) : (
-              "Start Coordination Workflow"
+              <>
+                <Sparkles className="w-5 h-5" />
+                <span>Start Coordination</span>
+              </>
             )}
           </motion.button>
-        </div>
-      </form>
+        )}
+      </div>
     </div>
   );
 }

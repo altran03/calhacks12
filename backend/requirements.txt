@@ -17,13 +17,13 @@ aiohttp==3.13.1
 
 # Fetch.ai uAgents
 uagents==0.22.10
-cosmpy==0.9.3
+cosmpy==0.11.0
 
 # WebSockets
 websockets==15.0.1
 
 # Database
-sqlalchemy==2.0.25
+sqlalchemy==2.0.36
 alembic==1.13.1
 
 # ngrok for webhooks
@@ -36,7 +36,7 @@ pytest-cov==5.0.0
 
 # Code quality
 black==25.1.0
-ruff==0.10.2
+ruff==0.14.2
 mypy==1.15.0
 
 # Document parsing

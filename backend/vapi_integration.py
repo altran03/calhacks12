@@ -24,8 +24,8 @@ class VapiIntegration:
             "assistant": {
                 "name": "CareLink Assistant",
                 "model": {
-                    "provider": "openai",
-                    "model": "gpt-3.5-turbo",
+                    "provider": "google",
+                    "model": "gemini-1.5-pro",
                     "systemMessage": f"""
                     You are calling {shelter_name} to check bed availability for tonight.
                     Be polite and professional. Ask:
@@ -37,8 +37,8 @@ class VapiIntegration:
                     """
                 },
                 "voice": {
-                    "provider": "elevenlabs",
-                    "voiceId": "21m00Tcm4TlvDq8ikWAM"  # Professional female voice
+                    "provider": "vapi",
+                    "voiceId": "sarah"  # Vapi's professional female voice
                 },
                 "firstMessage": f"Hello, this is CareLink calling to check bed availability at {shelter_name} for tonight. Do you have a moment to provide current availability?"
             },
@@ -82,8 +82,8 @@ class VapiIntegration:
                     """
                 },
                 "voice": {
-                    "provider": "elevenlabs",
-                    "voiceId": "21m00Tcm4TlvDq8ikWAM"
+                    "provider": "vapi",
+                    "voiceId": "sarah"
                 },
                 "firstMessage": f"Hello, this is CareLink calling about a new case assignment for patient {patient_name}. Do you have a moment to confirm your availability for this case?"
             },
@@ -130,8 +130,8 @@ class VapiIntegration:
                     """
                 },
                 "voice": {
-                    "provider": "elevenlabs",
-                    "voiceId": "21m00Tcm4TlvDq8ikWAM"
+                    "provider": "vapi",
+                    "voiceId": "sarah"
                 },
                 "firstMessage": f"Hello, this is CareLink calling to coordinate patient transport from {pickup_location} to {dropoff_location}. Do you have availability for a medical transport today?"
             },
@@ -178,8 +178,8 @@ class VapiIntegration:
                     """
                 },
                 "voice": {
-                    "provider": "elevenlabs",
-                    "voiceId": "21m00Tcm4TlvDq8ikWAM"
+                    "provider": "vapi",
+                    "voiceId": "sarah"
                 },
                 "firstMessage": f"Hello {patient_name}, this is CareLink calling to check on how you're doing after your hospital discharge. Do you have a moment to talk?"
             },
