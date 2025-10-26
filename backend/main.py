@@ -733,6 +733,82 @@ async def vapi_webhook(data: Dict[str, Any]):
     
     return {"status": "processed"}
 
+@app.post("/api/vapi/shelter-webhook")
+async def vapi_shelter_webhook(data: Dict[str, Any]):
+    """Handle Vapi webhook calls specifically for shelter availability"""
+    print(f"\n{'='*60}")
+    print(f"📞 VAPI SHELTER WEBHOOK RECEIVED")
+    print(f"{'='*60}")
+    
+    call_status = data.get("status", "unknown")
+    transcript = data.get("transcript", "")
+    call_id = data.get("callId", "")
+    duration = data.get("duration", 0)
+    
+    print(f"Status: {call_status}")
+    print(f"Call ID: {call_id}")
+    print(f"Duration: {duration} seconds")
+    print(f"Transcript: {transcript[:200]}...")
+    print(f"{'='*60}\n")
+    
+    # Parse transcript to extract bed availability
+    available_beds = parse_bed_availability_from_transcript(transcript)
+    
+    # Extract shelter name and phone from the call
+    # This would need to be passed in the webhook URL or stored in a cache
+    shelter_info = extract_shelter_info_from_call(data)
+    
+    if available_beds > 0:
+        print(f"✅ Shelter has {available_beds} beds available")
+        
+        # Update shelter in database
+        if CASE_MANAGER_AVAILABLE and shelter_info:
+            try:
+                shelter_name = shelter_info.get("name", "")
+                shelter_phone = shelter_info.get("phone", "")
+                
+                # Update the shelter's available beds in Supabase
+                case_manager.client.table('shelters').update({
+                    'available_beds': available_beds
+                }).eq('name', shelter_name).execute()
+                
+                print(f"✅ Updated {shelter_name} with {available_beds} available beds")
+            except Exception as e:
+                print(f"⚠️ Error updating shelter database: {e}")
+    else:
+        print(f"⚠️ No beds available or unclear response")
+    
+    return {"status": "processed", "available_beds": available_beds}
+
+def parse_bed_availability_from_transcript(transcript: str) -> int:
+    """Parse bed availability from call transcript"""
+    import re
+    
+    # Look for patterns like "12 beds", "we have 5", "3 available"
+    patterns = [
+        r'(\d+)\s+beds?\s+available',
+        r'we have\s+(\d+)',
+        r'(\d+)\s+available',
+        r'(\d+)\s+beds?',
+        r'(\d+)\s+open',
+    ]
+    
+    for pattern in patterns:
+        match = re.search(pattern, transcript.lower())
+        if match:
+            beds = int(match.group(1))
+            if 0 < beds < 1000:  # Sanity check
+                return beds
+    
+    # Default: if we can't parse, assume 0
+    return 0
+
+def extract_shelter_info_from_call(call_data: Dict[str, Any]) -> Dict[str, str]:
+    """Extract shelter information from call data"""
+    # This would retrieve from a cache or database
+    # For now, return empty dict
+    return {}
+
 @app.post("/api/process-pdf")
 async def process_pdf_upload(
     files: List[UploadFile] = File(...),

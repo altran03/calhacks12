@@ -74,9 +74,23 @@ async def coordinate_discharge_internal(ctx: Context, case_id: str, patient_name
         
         ctx.logger.info(f"✅ Shelter matched: {shelter_data.get('name', 'Unknown')}")
         
-        # Step 2: Send shelter matching request (simulated for now)
-        # In production, this would send to actual shelter agent
+        # Step 2: Send shelter matching request with patient context from social worker
+        # In production, this would send to actual shelter agent with patient information
         ctx.logger.info(f"📤 Notifying Shelter Agent: {shelter_data.get('name', '')}")
+        
+        # Prepare patient information that the shelter agent will use in the VAPI call
+        patient_context = {
+            'patient_name': patient_name,
+            'accessibility_needs': accessibility_needs,
+            'medical_condition': form_data.get('treatment_info', {}).get('diagnosis', ''),
+            'medications': medications,
+            'dietary_needs': dietary_needs,
+            'social_needs': social_needs
+        }
+        
+        # Add patient context to shelter data for VAPI call
+        shelter_data['patient_context'] = patient_context
+        ctx.logger.info(f"📋 Patient context prepared for shelter VAPI call")
         
         # Step 3: Send transport request using form data
         ctx.logger.info(f"📤 Requesting transport from {hospital} to {shelter_data.get('address', '')}")

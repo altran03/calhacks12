@@ -11,6 +11,12 @@ from .models import (
 )
 from typing import Dict, Any
 from datetime import datetime
+import os
+import requests
+
+# VAPI Integration
+VAPI_API_KEY = os.getenv("VAPI_API_KEY", "")
+VAPI_BASE_URL = "https://api.vapi.ai"
 
 # Initialize Shelter Agent
 shelter_agent = Agent(
@@ -30,7 +36,12 @@ async def handle_shelter_matching(ctx: Context, sender: str, msg: ShelterMatch):
     ctx.logger.info(f"Processing shelter match for {msg.case_id}")
     
     try:
-        # Step 1: Verify availability via Vapi call
+        # Get patient context from the social worker agent's data
+        # This comes from the coordinator agent's form data
+        patient_context = getattr(msg, 'patient_context', {})
+        msg.extra_patient_context = patient_context
+        
+        # Step 1: Verify availability via Vapi call with patient information
         availability_confirmed = await verify_shelter_availability_via_vapi(msg)
         
         if availability_confirmed:
@@ -104,10 +115,99 @@ async def handle_availability_request(ctx: Context, sender: str, msg: ShelterAva
         ctx.logger.error(f"Error checking availability for {msg.shelter_name}: {e}")
 
 async def verify_shelter_availability_via_vapi(shelter_match: ShelterMatch) -> bool:
-    """Verify shelter availability via Vapi voice call"""
-    # This would integrate with Vapi API to make voice calls
-    # For demo purposes, return True
-    return True
+    """Verify shelter availability via Vapi voice call with patient information from social worker"""
+    # For testing: get your phone number from env, otherwise use shelter number
+    test_phone = os.getenv("TEST_PHONE_NUMBER", "")
+    phone_to_call = test_phone if test_phone else shelter_match.phone
+    
+    print(f"📞 Calling {shelter_match.shelter_name} at {phone_to_call} via VAPI...")
+    if test_phone:
+        print(f"⚠️  TEST MODE: Calling your number {test_phone} for testing")
+    
+    # Get patient information that the social worker agent has gathered
+    # This would typically come from the coordinator agent's form data
+    patient_info = shelter_match.extra_patient_context if hasattr(shelter_match, 'extra_patient_context') else {}
+    
+    # Prepare the conversation with patient context
+    patient_name = patient_info.get('patient_name', 'the patient')
+    accessibility_needs = patient_info.get('accessibility_needs', '')
+    medical_condition = patient_info.get('medical_condition', '')
+    medications = patient_info.get('medications', [])
+    
+    # Build patient context message
+    patient_context = f"Patient {patient_name}"
+    if medical_condition:
+        patient_context += f" with {medical_condition}"
+    if accessibility_needs:
+        patient_context += f", requires {accessibility_needs}"
+    if medications:
+        patient_context += f", taking {len(medications)} medications"
+    
+    # Make VAPI call
+    try:
+        conversation = {
+            "type": "outbound",
+            "phoneNumber": phone_to_call,
+            "assistant": {
+                "name": "CareLink Shelter Coordinator",
+                "model": {
+                    "provider": "google",
+                    "model": "gemini-1.5-pro",
+                    "systemMessage": f"""
+                    You are calling {shelter_match.shelter_name} to check bed availability for tonight for a patient being discharged from the hospital.
+                    
+                    Patient information you received from the social worker agent:
+                    - Name: {patient_name}
+                    - Medical condition: {medical_condition}
+                    - Accessibility needs: {accessibility_needs}
+                    - Medications: {', '.join([m.get('name', '') for m in medications[:3]]) if medications else 'None'}
+                    
+                    You need to:
+                    1. Greet professionally and explain you're calling from CareLink on behalf of a hospital discharge
+                    2. Ask if they have beds available for TONIGHT
+                    3. Confirm they can accommodate {accessibility_needs if accessibility_needs else 'standard needs'}
+                    4. Get the EXACT number of beds available
+                    5. Confirm they can accept {patient_name} for tonight
+                    
+                    Be brief, professional, and get clear confirmation including the number of beds.
+                    """
+                },
+                "voice": {
+                    "provider": "vapi",
+                    "voiceId": "sarah"
+                },
+                "firstMessage": f"Hello, this is CareLink calling from a hospital on behalf of {patient_name} who needs shelter placement tonight. Do you have a moment to check your current bed availability?"
+            },
+            "webhook": {
+                "url": "http://localhost:8000/api/vapi/shelter-webhook",
+                "events": ["call-ended"]
+            }
+        }
+        
+        headers = {
+            "Authorization": f"Bearer {VAPI_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        response = requests.post(
+            f"{VAPI_BASE_URL}/call",
+            headers=headers,
+            json=conversation
+        )
+        
+        if response.status_code == 200:
+            call_result = response.json()
+            print(f"✅ VAPI call initiated to {shelter_match.shelter_name}")
+            print(f"   Call ID: {call_result.get('callId', 'N/A')}")
+            return True
+        else:
+            print(f"⚠️ VAPI call failed: {response.status_code} - {response.text}")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Error making VAPI call: {e}")
+        # Fallback: assume available if call fails
+        return True
 
 async def reserve_shelter_bed(shelter_match: ShelterMatch) -> bool:
     """Reserve a bed at the shelter"""
