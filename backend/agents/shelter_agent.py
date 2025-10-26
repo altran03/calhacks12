@@ -13,7 +13,12 @@ from .agent_registry import get_agent_address, AgentNames
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 import os
+import requests
 from pydantic import BaseModel
+
+# VAPI Integration
+VAPI_API_KEY = os.getenv("VAPI_API_KEY", "")
+VAPI_BASE_URL = "https://api.vapi.ai"
 
 class HealthResponse(BaseModel):
     status: str
@@ -53,7 +58,12 @@ async def handle_shelter_matching(ctx: Context, sender: str, msg: ShelterMatch):
     ctx.logger.info(f"Processing shelter match for {msg.case_id}")
     
     try:
-        # Step 1: Verify availability via Vapi call
+        # Get patient context from the social worker agent's data
+        # This comes from the coordinator agent's form data
+        patient_context = getattr(msg, 'patient_context', {})
+        msg.extra_patient_context = patient_context
+        
+        # Step 1: Verify availability via Vapi call with patient information
         availability_confirmed = await verify_shelter_availability_via_vapi(msg)
         
         if availability_confirmed:
@@ -156,6 +166,7 @@ async def handle_availability_request(ctx: Context, sender: str, msg: ShelterAva
         ctx.logger.error(f"Error checking availability for {msg.shelter_name}: {e}")
 
 async def verify_shelter_availability_via_vapi(shelter_match: ShelterMatch) -> bool:
+<<<<<<< HEAD
     """Verify shelter availability via Vapi voice call"""
     try:
         # Import Vapi integration

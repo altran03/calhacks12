@@ -65,6 +65,7 @@ class ShelterMatch(Model):
     accessibility: bool
     services: List[str]
     phone: str
+    patient_context: Optional[Dict[str, Any]] = None  # Patient info from social worker for VAPI calls
 
 class ShelterAvailabilityRequest(Model):
     case_id: str

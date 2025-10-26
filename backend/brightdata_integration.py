@@ -219,7 +219,7 @@ class BrightDataIntegration:
                 "accessibility": True,
                 "hours": "24/7 Access Points",
                 "eligibility": "SF residents experiencing homelessness",
-                "website": url,
+                "website": "https://www.sf.gov/departments--homelessness-and-supportive-housing",
                 "last_updated": datetime.now().isoformat(),
                 "source": "web_scraping"
             })
@@ -234,7 +234,7 @@ class BrightDataIntegration:
                 "accessibility": True,
                 "hours": "24/7",
                 "eligibility": "Adults 18+ experiencing homelessness",
-                "website": url,
+                "website": "https://hsh.sfgov.org/services/how-to-get-services/accessing-temporary-shelter/adult-temporary-shelter/",
                 "last_updated": datetime.now().isoformat(),
                 "source": "web_scraping"
             })
@@ -249,7 +249,7 @@ class BrightDataIntegration:
                 "accessibility": True,
                 "hours": "Mon-Fri 8AM-5PM",
                 "eligibility": "SF residents at risk of or experiencing homelessness",
-                "website": url,
+                "website": "https://www.sfhsa.org/services/housing",
                 "last_updated": datetime.now().isoformat(),
                 "source": "web_scraping"
             })
@@ -264,7 +264,7 @@ class BrightDataIntegration:
                 "accessibility": True,
                 "hours": "Varies by location",
                 "eligibility": "Anyone experiencing homelessness in SF",
-                "website": url,
+                "website": "https://www.sf.gov/get-help-department-homelessness-and-supportive-housing",
                 "last_updated": datetime.now().isoformat(),
                 "source": "web_scraping"
             })
