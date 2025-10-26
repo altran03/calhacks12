@@ -116,39 +116,27 @@ export default function MapView() {
       setShelters(data);
     } catch (error) {
       console.error("Error fetching shelters:", error);
-      // Fallback to mock data if API is not available
-      setShelters([
-        {
-          name: "Mission Neighborhood Resource Center",
-          address: "165 Capp St, San Francisco, CA 94110",
-          capacity: 50,
-          available_beds: 12,
-          accessibility: true,
-          phone: "(415) 431-4000",
-          services: ["medical respite", "case management", "meals"],
-          location: { lat: 37.7749, lng: -122.4194 }
-        },
-        {
-          name: "Hamilton Family Center",
-          address: "260 Golden Gate Ave, San Francisco, CA 94102",
-          capacity: 30,
-          available_beds: 8,
-          accessibility: true,
-          phone: "(415) 292-5222",
-          services: ["family shelter", "childcare", "counseling"],
-          location: { lat: 37.7849, lng: -122.4094 }
-        },
-        {
-          name: "St. Anthony's Foundation",
-          address: "150 Golden Gate Ave, San Francisco, CA 94102",
-          capacity: 100,
-          available_beds: 25,
-          accessibility: true,
-          phone: "(415) 241-2600",
-          services: ["emergency shelter", "medical clinic", "dining room"],
-          location: { lat: 37.7849, lng: -122.4094 }
-        }
-      ]);
+      // No shelters available - show empty state
+      setShelters([]);
+    }
+  };
+
+  const fetchDirectionsRoute = async (start: {lat: number; lng: number}, end: {lat: number; lng: number}) => {
+    try {
+      const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${start.lng},${start.lat};${end.lng},${end.lat}?geometries=geojson&access_token=${MAPBOX_TOKEN}`;
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (data.routes && data.routes.length > 0) {
+        return data.routes[0].geometry.coordinates.map((coord: [number, number]) => ({
+          lng: coord[0],
+          lat: coord[1]
+        }));
+      }
+      return null;
+    } catch (error) {
+      console.error("Error fetching directions:", error);
+      return null;
     }
   };
 
@@ -161,6 +149,20 @@ export default function MapView() {
         if (response.ok) {
           const workflowData = await response.json();
           
+          // If transport exists, fetch the real road route
+          let transportWithRoute = workflowData.transport;
+          if (workflowData.transport && workflowData.transport.route && workflowData.transport.route.length >= 2) {
+            const start = workflowData.transport.route[0];
+            const end = workflowData.transport.route[workflowData.transport.route.length - 1];
+            const roadRoute = await fetchDirectionsRoute(start, end);
+            if (roadRoute) {
+              transportWithRoute = {
+                ...workflowData.transport,
+                route: roadRoute
+              };
+            }
+          }
+          
           // Convert backend workflow to frontend format
           const workflow: Workflow = {
             id: workflowData.case_id,
@@ -169,7 +171,7 @@ export default function MapView() {
             currentStep: workflowData.current_step?.replace(/_/g, ' ') || "Processing",
             assignedShelter: workflowData.shelter?.name,
             eta: workflowData.transport?.eta,
-            transport: workflowData.transport
+            transport: transportWithRoute
           };
           
           setWorkflows([workflow]);
@@ -177,30 +179,8 @@ export default function MapView() {
         }
       }
       
-      // Fallback to mock data
-      const mockWorkflows: Workflow[] = [
-        {
-          id: "WF001",
-          patientName: "John Doe",
-          status: "in_progress",
-          currentStep: "Transport Coordination",
-          assignedShelter: "Mission Neighborhood Resource Center",
-          eta: "15 mins",
-          transport: {
-            provider: "SF Paratransit",
-            vehicle_type: "wheelchair_accessible",
-            eta: "30 minutes",
-            route: [
-              {lat: 37.7749, lng: -122.4194},
-              {lat: 37.7799, lng: -122.4144},
-              {lat: 37.7824, lng: -122.4119},
-              {lat: 37.7849, lng: -122.4094}
-            ],
-            status: "scheduled"
-          }
-        },
-      ];
-      setWorkflows(mockWorkflows);
+      // No active workflow - show empty state
+      setWorkflows([]);
     } catch (error) {
       console.error("Error fetching workflows:", error);
     }

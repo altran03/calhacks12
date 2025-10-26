@@ -20,7 +20,8 @@ import {
   Car,
   Users,
   Package,
-  MapPin
+  MapPin,
+  Trash2
 } from "lucide-react";
 
 interface Workflow {
@@ -151,6 +152,31 @@ export default function WorkflowList() {
     setExpandedWorkflow(expandedWorkflow === caseId ? null : caseId);
   };
 
+  const deleteWorkflow = async (caseId: string) => {
+    if (!confirm(`Are you sure you want to delete workflow ${caseId}? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:8000/api/workflows/${caseId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        // Remove from local state
+        setWorkflows(workflows.filter(w => w.case_id !== caseId));
+        console.log(`Workflow ${caseId} deleted successfully`);
+      } else {
+        const error = await response.json();
+        console.error('Error deleting workflow:', error);
+        alert(`Failed to delete workflow: ${error.detail || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error deleting workflow:', error);
+      alert('Failed to delete workflow. Please try again.');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -228,15 +254,17 @@ export default function WorkflowList() {
               className="group"
             >
               <div
-                className="p-6 rounded-2xl border-2 transition-all duration-300 hover:shadow-lg cursor-pointer"
+                className="p-6 rounded-2xl border-2 transition-all duration-300 hover:shadow-lg"
                 style={{
                   background: 'rgba(255, 255, 255, 0.9)',
                   borderColor: '#E0D5C7'
                 }}
-                onClick={() => toggleWorkflowExpansion(workflow.case_id)}
               >
                 <div className="flex items-start justify-between">
-                  <div className="flex-1">
+                  <div 
+                    className="flex-1 cursor-pointer"
+                    onClick={() => toggleWorkflowExpansion(workflow.case_id)}
+                  >
                     {/* Case ID and Status */}
                     <div className="flex items-center space-x-3 mb-3">
                       <div className="flex items-center space-x-2">
@@ -294,17 +322,36 @@ export default function WorkflowList() {
                     )}
                   </div>
 
-                  {/* Expand Button */}
-                  <div className="flex items-center justify-center w-12 h-12 rounded-xl transition-all duration-300"
-                       style={{
-                         background: 'linear-gradient(135deg, #0D7377, #14919B)',
-                         opacity: 0.9
-                       }}>
-                    {isExpanded ? (
-                      <ChevronDown className="w-6 h-6 text-white" />
-                    ) : (
-                      <ChevronRight className="w-6 h-6 text-white" />
-                    )}
+                  {/* Action Buttons */}
+                  <div className="flex items-center space-x-2">
+                    {/* Delete Button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteWorkflow(workflow.case_id);
+                      }}
+                      className="flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-300 hover:scale-105"
+                      style={{
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        border: '1px solid rgba(239, 68, 68, 0.3)'
+                      }}
+                      title="Delete workflow"
+                    >
+                      <Trash2 className="w-4 h-4" style={{ color: '#EF4444' }} />
+                    </button>
+                    
+                    {/* Expand Button */}
+                    <div className="flex items-center justify-center w-12 h-12 rounded-xl transition-all duration-300"
+                         style={{
+                           background: 'linear-gradient(135deg, #0D7377, #14919B)',
+                           opacity: 0.9
+                         }}>
+                      {isExpanded ? (
+                        <ChevronDown className="w-6 h-6 text-white" />
+                      ) : (
+                        <ChevronRight className="w-6 h-6 text-white" />
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

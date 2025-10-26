@@ -1,0 +1,226 @@
+{
+  "hospital_name": "UCSF Medical Center",
+  "pharmacy_location": "Ground Floor, Wing B",
+  "last_updated": "2025-10-26",
+  "medications": [
+    {
+      "name": "Lisinopril",
+      "generic_name": "Lisinopril",
+      "dosages": ["5mg", "10mg", "20mg", "40mg"],
+      "form": "tablet",
+      "quantity_in_stock": 500,
+      "typical_discharge_supply_days": 30,
+      "instructions": "Take once daily for blood pressure",
+      "category": "cardiovascular"
+    },
+    {
+      "name": "Metformin",
+      "generic_name": "Metformin Hydrochloride",
+      "dosages": ["500mg", "850mg", "1000mg"],
+      "form": "tablet",
+      "quantity_in_stock": 1000,
+      "typical_discharge_supply_days": 30,
+      "instructions": "Take with meals for diabetes management",
+      "category": "diabetes"
+    },
+    {
+      "name": "Aspirin",
+      "generic_name": "Acetylsalicylic Acid",
+      "dosages": ["81mg", "325mg"],
+      "form": "tablet",
+      "quantity_in_stock": 2000,
+      "typical_discharge_supply_days": 30,
+      "instructions": "Take once daily for heart health",
+      "category": "cardiovascular"
+    },
+    {
+      "name": "Atorvastatin",
+      "generic_name": "Atorvastatin Calcium",
+      "dosages": ["10mg", "20mg", "40mg", "80mg"],
+      "form": "tablet",
+      "quantity_in_stock": 300,
+      "typical_discharge_supply_days": 30,
+      "instructions": "Take once daily for cholesterol management",
+      "category": "cardiovascular"
+    },
+    {
+      "name": "Insulin",
+      "generic_name": "Insulin Glargine",
+      "dosages": ["100 units/mL"],
+      "form": "vial",
+      "quantity_in_stock": 50,
+      "typical_discharge_supply_days": 30,
+      "instructions": "Inject as directed by physician for diabetes",
+      "category": "diabetes",
+      "requires_refrigeration": true
+    },
+    {
+      "name": "Levothyroxine",
+      "generic_name": "Levothyroxine Sodium",
+      "dosages": ["25mcg", "50mcg", "75mcg", "100mcg", "125mcg"],
+      "form": "tablet",
+      "quantity_in_stock": 400,
+      "typical_discharge_supply_days": 30,
+      "instructions": "Take once daily on empty stomach for thyroid condition",
+      "category": "endocrine"
+    },
+    {
+      "name": "Amlodipine",
+      "generic_name": "Amlodipine Besylate",
+      "dosages": ["2.5mg", "5mg", "10mg"],
+      "form": "tablet",
+      "quantity_in_stock": 350,
+      "typical_discharge_supply_days": 30,
+      "instructions": "Take once daily for blood pressure",
+      "category": "cardiovascular"
+    },
+    {
+      "name": "Omeprazole",
+      "generic_name": "Omeprazole",
+      "dosages": ["20mg", "40mg"],
+      "form": "capsule",
+      "quantity_in_stock": 600,
+      "typical_discharge_supply_days": 30,
+      "instructions": "Take before meals for acid reflux",
+      "category": "gastrointestinal"
+    },
+    {
+      "name": "Gabapentin",
+      "generic_name": "Gabapentin",
+      "dosages": ["100mg", "300mg", "400mg"],
+      "form": "capsule",
+      "quantity_in_stock": 250,
+      "typical_discharge_supply_days": 30,
+      "instructions": "Take as directed for nerve pain",
+      "category": "neurological"
+    },
+    {
+      "name": "Sertraline",
+      "generic_name": "Sertraline Hydrochloride",
+      "dosages": ["25mg", "50mg", "100mg"],
+      "form": "tablet",
+      "quantity_in_stock": 200,
+      "typical_discharge_supply_days": 30,
+      "instructions": "Take once daily for depression/anxiety",
+      "category": "psychiatric"
+    },
+    {
+      "name": "Albuterol",
+      "generic_name": "Albuterol Sulfate",
+      "dosages": ["90mcg/actuation"],
+      "form": "inhaler",
+      "quantity_in_stock": 100,
+      "typical_discharge_supply_days": 30,
+      "instructions": "Use as needed for breathing difficulties",
+      "category": "respiratory"
+    },
+    {
+      "name": "Furosemide",
+      "generic_name": "Furosemide",
+      "dosages": ["20mg", "40mg", "80mg"],
+      "form": "tablet",
+      "quantity_in_stock": 450,
+      "typical_discharge_supply_days": 30,
+      "instructions": "Take in morning for fluid retention",
+      "category": "cardiovascular"
+    },
+    {
+      "name": "Warfarin",
+      "generic_name": "Warfarin Sodium",
+      "dosages": ["1mg", "2mg", "2.5mg", "3mg", "4mg", "5mg", "6mg", "7.5mg", "10mg"],
+      "form": "tablet",
+      "quantity_in_stock": 300,
+      "typical_discharge_supply_days": 30,
+      "instructions": "Take as directed - requires regular blood monitoring",
+      "category": "anticoagulant",
+      "requires_monitoring": true
+    },
+    {
+      "name": "Hydrocodone-Acetaminophen",
+      "generic_name": "Hydrocodone-Acetaminophen",
+      "dosages": ["5mg-325mg", "7.5mg-325mg", "10mg-325mg"],
+      "form": "tablet",
+      "quantity_in_stock": 150,
+      "typical_discharge_supply_days": 7,
+      "instructions": "Take as needed for pain - controlled substance",
+      "category": "pain_management",
+      "controlled_substance": true
+    },
+    {
+      "name": "Tramadol",
+      "generic_name": "Tramadol Hydrochloride",
+      "dosages": ["50mg", "100mg"],
+      "form": "tablet",
+      "quantity_in_stock": 200,
+      "typical_discharge_supply_days": 14,
+      "instructions": "Take as needed for moderate pain",
+      "category": "pain_management"
+    },
+    {
+      "name": "Pantoprazole",
+      "generic_name": "Pantoprazole Sodium",
+      "dosages": ["20mg", "40mg"],
+      "form": "tablet",
+      "quantity_in_stock": 400,
+      "typical_discharge_supply_days": 30,
+      "instructions": "Take before first meal of the day",
+      "category": "gastrointestinal"
+    },
+    {
+      "name": "Prednisone",
+      "generic_name": "Prednisone",
+      "dosages": ["5mg", "10mg", "20mg"],
+      "form": "tablet",
+      "quantity_in_stock": 300,
+      "typical_discharge_supply_days": 14,
+      "instructions": "Take with food as directed - taper as instructed",
+      "category": "anti-inflammatory"
+    },
+    {
+      "name": "Losartan",
+      "generic_name": "Losartan Potassium",
+      "dosages": ["25mg", "50mg", "100mg"],
+      "form": "tablet",
+      "quantity_in_stock": 350,
+      "typical_discharge_supply_days": 30,
+      "instructions": "Take once daily for blood pressure",
+      "category": "cardiovascular"
+    },
+    {
+      "name": "Clopidogrel",
+      "generic_name": "Clopidogrel Bisulfate",
+      "dosages": ["75mg"],
+      "form": "tablet",
+      "quantity_in_stock": 250,
+      "typical_discharge_supply_days": 30,
+      "instructions": "Take once daily to prevent blood clots",
+      "category": "anticoagulant"
+    },
+    {
+      "name": "Alprazolam",
+      "generic_name": "Alprazolam",
+      "dosages": ["0.25mg", "0.5mg", "1mg", "2mg"],
+      "form": "tablet",
+      "quantity_in_stock": 100,
+      "typical_discharge_supply_days": 14,
+      "instructions": "Take as directed for anxiety - controlled substance",
+      "category": "psychiatric",
+      "controlled_substance": true
+    }
+  ],
+  "discharge_guidelines": {
+    "homeless_patients": {
+      "default_supply_days": 30,
+      "controlled_substances_supply_days": 14,
+      "pain_medication_supply_days": 7,
+      "include_written_instructions": true,
+      "package_in_labeled_containers": true
+    },
+    "special_considerations": {
+      "refrigeration_required": "Provide cold pack and instructions",
+      "requires_monitoring": "Include lab order and follow-up appointment",
+      "controlled_substance": "Reduced supply, emphasize follow-up"
+    }
+  }
+}
+

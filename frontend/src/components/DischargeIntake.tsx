@@ -60,6 +60,58 @@ interface PatientInfo {
   staffName: string;
   intakeDate: string;
 
+  // Flat structure fields for form handling (optional)
+  phone1?: string;
+  phone2?: string;
+  address?: string;
+  apartment?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  emergencyContactName?: string;
+  emergencyContactRelationship?: string;
+  emergencyContactPhone?: string;
+  dischargingFacility?: string;
+  dischargingFacilityPhone?: string;
+  facilityAddress?: string;
+  facilityFloor?: string;
+  facilityCity?: string;
+  facilityState?: string;
+  facilityZip?: string;
+  dateOfAdmission?: string;
+  dischargeAddress?: string;
+  dischargeApartment?: string;
+  dischargeCity?: string;
+  dischargeState?: string;
+  dischargeZip?: string;
+  dischargePhone?: string;
+  travelOutsideNyc?: boolean;
+  travelDateDestination?: string;
+  appointmentDate?: string;
+  physicianName?: string;
+  physicianPhone?: string;
+  physicianCell?: string;
+  physicianAddress?: string;
+  physicianCity?: string;
+  physicianState?: string;
+  physicianZip?: string;
+  barriersToAdherence?: string | string[];
+  physicalDisability?: string;
+  medicalCondition?: string;
+  substanceUse?: string;
+  mentalDisorder?: string;
+  otherBarriers?: string;
+  therapyInitiatedDate?: string;
+  therapyInterrupted?: boolean;
+  interruptionReason?: string;
+  medications?: string | object;
+  frequency?: string;
+  centralLineInserted?: boolean;
+  daysOfMedicationSupplied?: string;
+  patientAgreedToDot?: boolean;
+  responsiblePhysicianName?: string;
+  physicianLicenseNumber?: string;
+
   // Parser Agent Autofill Structures (optional)
   contactInfo?: {
     name?: string;
@@ -308,34 +360,50 @@ export default function DischargeIntake({ onWorkflowStarted }: DischargeIntakePr
       setSubmittedCaseId(storedCaseId);
     }
 
-    // Load form draft from backend
-    const loadDraft = async () => {
-      try {
-        const response = await fetch(`http://localhost:8000/api/form-draft/${storedCaseId}`);
-        const result = await response.json();
-        
-        if (result.status === "success" && result.form_data) {
-          console.log("✅ Loaded form draft:", result.form_data);
-          setFormData(result.form_data);
-          console.log("📝 Form restored from SQLite database");
-        } else {
-          console.log("📄 No existing draft found, starting fresh");
+    // Load form draft from backend - but only if not starting a new parsing session
+    const isNewParsingSession = localStorage.getItem('is_new_parsing_session') === 'true';
+    
+    if (!isNewParsingSession) {
+      const loadDraft = async () => {
+        try {
+          const response = await fetch(`http://localhost:8000/api/form-draft/${storedCaseId}`);
+          const result = await response.json();
+          
+          if (result.status === "success" && result.form_data) {
+            console.log("✅ Loaded form draft:", result.form_data);
+            setFormData(result.form_data);
+            console.log("📝 Form restored from database");
+          } else {
+            console.log("📄 No existing draft found, starting fresh");
+          }
+        } catch (error) {
+          console.error("Error loading form draft:", error);
         }
-      } catch (error) {
-        console.error("Error loading form draft:", error);
-      }
-    };
+      };
 
-    loadDraft();
+      loadDraft();
+    } else {
+      // Clear the new parsing session flag and start fresh
+      localStorage.removeItem('is_new_parsing_session');
+      console.log("🆕 Starting fresh form for new parsing session");
+    }
   }, []);
 
   // Auto-save form data when it changes (debounced)
   useEffect(() => {
-    if (!caseId) return;
+    if (!caseId || !formData) return;
 
-    setSaveStatus("saving");
+    // Only auto-save if formData has meaningful content
+    const hasContent = Object.values(formData).some(value => 
+      value && value.toString().trim().length > 0
+    );
+    
+    if (!hasContent) return;
+
     const timeoutId = setTimeout(async () => {
       try {
+        setSaveStatus("saving");
+        
         const formDataToSend = new FormData();
         formDataToSend.append('case_id', caseId);
         formDataToSend.append('form_data', JSON.stringify(formData));
@@ -350,6 +418,9 @@ export default function DischargeIntake({ onWorkflowStarted }: DischargeIntakePr
           console.log("💾 Form auto-saved to SQLite");
           setSaveStatus("saved");
           setTimeout(() => setSaveStatus(""), 2000);
+        } else {
+          console.error("❌ Auto-save failed:", result);
+          setSaveStatus("");
         }
       } catch (error) {
         console.error("Error auto-saving form:", error);
@@ -359,6 +430,15 @@ export default function DischargeIntake({ onWorkflowStarted }: DischargeIntakePr
 
     return () => clearTimeout(timeoutId);
   }, [formData, caseId]);
+
+  // Safe form data updater to prevent crashes
+  const updateFormData = (updates: Partial<PatientInfo>) => {
+    try {
+      setFormData(prev => ({ ...prev, ...updates }));
+    } catch (error) {
+      console.error("Error updating form data:", error);
+    }
+  };
 
   const steps = [
     { 
@@ -459,6 +539,49 @@ export default function DischargeIntake({ onWorkflowStarted }: DischargeIntakePr
 
     try {
       setIsSubmitting(true);
+      
+      // Set flag to indicate this is a new parsing session
+      localStorage.setItem('is_new_parsing_session', 'true');
+      
+      // Clear any existing form draft from database to prevent data leak
+      try {
+        await fetch(`http://localhost:8000/api/form-draft/clear/${caseId}`, {
+          method: 'POST'
+        });
+        console.log("🧹 Cleared existing form draft to prevent data leak");
+      } catch (error) {
+        console.warn("Could not clear form draft:", error);
+      }
+      
+      // Clear any existing form data to prevent data leak
+      setFormData({
+        name: "",
+        dateOfBirth: "",
+        medicalRecordNumber: "",
+        gender: "",
+        housingStatus: "homeless",
+        principalResidence: "",
+        primaryDiagnosis: "",
+        treatmentSummary: "",
+        dischargeDateTime: "",
+        medicallyStable: true,
+        plannedDestination: "",
+        acceptingAgencyName: "",
+        acceptingAgencyContact: "",
+        interimLocation: "",
+        transportationArranged: "",
+        followUpClinic: "",
+        mealOffered: "",
+        clothingProvided: "",
+        dischargeMedication: "",
+        medicationList: "",
+        infectiousDiseaseScreening: "",
+        insuranceScreening: "",
+        socialWorkerAssigned: "",
+        consentForReferral: "",
+        staffName: "",
+        intakeDate: ""
+      });
       
       const formDataToSend = new FormData();
       formDataToSend.append("case_id", caseId || `CASE_${Date.now()}`);

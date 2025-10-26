@@ -10,6 +10,14 @@ from .models import (
 )
 from typing import Dict, Any
 from datetime import datetime, timedelta
+import os
+import json
+from pydantic import BaseModel
+
+class HealthResponse(BaseModel):
+    status: str
+    agent: str
+    port: int
 
 # Initialize Social Worker Agent
 social_worker_agent = Agent(
@@ -105,6 +113,118 @@ async def confirm_social_worker_assignment_via_vapi(assignment: SocialWorkerAssi
     # This would integrate with Vapi API
     # For demo purposes, return True
     return True
+
+async def generate_latex_discharge_report(case_id: str, workflow_data: Dict[str, Any]) -> str:
+    """Generate professional LaTeX discharge report"""
+    try:
+        # Extract data from workflow
+        patient = workflow_data.get('patient', {})
+        shelter = workflow_data.get('shelter', {})
+        transport = workflow_data.get('transport', {})
+        timeline = workflow_data.get('timeline', [])
+        
+        # Generate LaTeX report
+        latex_content = f"""
+\\documentclass[12pt]{{article}}
+\\usepackage[utf8]{{inputenc}}
+\\usepackage[margin=1in]{{geometry}}
+\\usepackage{{fancyhdr}}
+\\usepackage{{enumitem}}
+\\usepackage{{xcolor}}
+\\usepackage{{hyperref}}
+
+\\pagestyle{{fancy}}
+\\fancyhf{{}}
+\\fancyhead[L]{{CareLink Discharge Coordination Report}}
+\\fancyhead[R]{{Case ID: {case_id}}}
+\\fancyfoot[C]{{Page \\thepage}}
+
+\\title{{\\textbf{{Discharge Coordination Report}}}}
+\\author{{CareLink Multi-Agent System}}
+\\date{{\\today}}
+
+\\begin{{document}}
+
+\\maketitle
+
+\\section{{Patient Information}}
+\\begin{{itemize}}
+    \\item \\textbf{{Name:}} {patient.get('contact_info', {}).get('name', 'N/A')}
+    \\item \\textbf{{Medical Record:}} {patient.get('discharge_info', {}).get('medical_record_number', 'N/A')}
+    \\item \\textbf{{Discharging Facility:}} {patient.get('discharge_info', {}).get('discharging_facility', 'N/A')}
+    \\item \\textbf{{Discharge Date:}} {patient.get('discharge_info', {}).get('planned_discharge_date', 'N/A')}
+\\end{{itemize}}
+
+\\section{{Coordination Summary}}
+This report documents the automated coordination of discharge services for the above patient using the CareLink Multi-Agent System.
+
+\\subsection{{Shelter Placement}}
+\\begin{{itemize}}
+    \\item \\textbf{{Shelter:}} {shelter.get('name', 'N/A')}
+    \\item \\textbf{{Address:}} {shelter.get('address', 'N/A')}
+    \\item \\textbf{{Phone:}} {shelter.get('phone', 'N/A')}
+    \\item \\textbf{{Available Beds:}} {shelter.get('available_beds', 'N/A')}
+    \\item \\textbf{{Accessibility:}} {'Yes' if shelter.get('accessibility') else 'No'}
+\\end{{itemize}}
+
+\\subsection{{Transportation}}
+\\begin{{itemize}}
+    \\item \\textbf{{Provider:}} {transport.get('provider', 'N/A')}
+    \\item \\textbf{{Vehicle Type:}} {transport.get('vehicle_type', 'N/A')}
+    \\item \\textbf{{ETA:}} {transport.get('eta', 'N/A')}
+    \\item \\textbf{{Status:}} {transport.get('status', 'N/A')}
+\\end{{itemize}}
+
+\\section{{Agent Coordination Timeline}}
+The following agents were coordinated to ensure seamless discharge:
+
+\\begin{{enumerate}}
+"""
+        
+        # Add timeline events
+        for i, event in enumerate(timeline, 1):
+            latex_content += f"""
+    \\item \\textbf{{{event.get('step', 'Unknown Step').replace('_', ' ').title()}}}
+    \\begin{{itemize}}
+        \\item Status: {event.get('status', 'Unknown')}
+        \\item Description: {event.get('description', 'No description')}
+        \\item Timestamp: {event.get('timestamp', 'Unknown')}
+    \\end{{itemize}}
+"""
+        
+        latex_content += """
+\\end{enumerate}
+
+\\section{Follow-up Care Plan}
+\\begin{itemize}
+    \\item Social worker assigned for ongoing case management
+    \\item Regular check-ins scheduled for 30, 60, and 90 days
+    \\item Medication management coordinated with pharmacy
+    \\item Benefit verification completed
+    \\item Community resources identified and connected
+\\end{itemize}
+
+\\section{Contact Information}
+For questions about this discharge coordination, please contact:
+\\begin{itemize}
+    \\item CareLink System Administrator
+    \\item Phone: (415) 555-CARE
+    \\item Email: support@carelink.org
+\\end{itemize}
+
+\\vspace{1cm}
+\\begin{center}
+\\textit{This report was generated automatically by the CareLink Multi-Agent System.}
+\\end{center}
+
+\\end{document}
+"""
+        
+        return latex_content
+        
+    except Exception as e:
+        print(f"❌ Error generating LaTeX report: {e}")
+        return f"Error generating report: {str(e)}"
 
 async def schedule_initial_contact(assignment: SocialWorkerAssignment) -> Dict[str, Any]:
     """Schedule initial contact with patient"""
@@ -228,6 +348,12 @@ async def check_social_worker_availability(worker: Dict[str, Any]) -> Dict[str, 
         "next_available": "2024-01-15",
         "specialization_match": True
     }
+
+# Health check endpoint
+@social_worker_agent.on_rest_get("/health", HealthResponse)
+async def health_check(ctx: Context):
+    """Health check endpoint"""
+    return HealthResponse(status="healthy", agent="social_worker_agent", port=8005)
 
 # Include protocol with manifest publishing for Agentverse deployment
 social_worker_agent.include(social_worker_protocol, publish_manifest=True)

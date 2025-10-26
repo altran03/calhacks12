@@ -1,9 +1,10 @@
-# Vapi Integration Example
+# Vapi Integration with Demo Mode
 # This file shows how to integrate Vapi voice calls with CareLink
 
 import requests
 import json
 import os
+import time
 from typing import Dict, Any
 from dotenv import load_dotenv
 
@@ -11,16 +12,31 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class VapiIntegration:
-    def __init__(self, api_key: str, demo_mode: bool = True, demo_phone: str = None):
-        self.api_key = api_key
+    def __init__(self, api_key: str = None, demo_phone: str = None, demo_mode: bool = True):
+        self.api_key = api_key or os.getenv("VAPI_API_KEY")
         self.base_url = "https://api.vapi.ai"
         self.headers = {
-            "Authorization": f"Bearer {api_key}",
+            "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
-        # Demo mode configuration
-        self.demo_mode = demo_mode if demo_mode is not None else os.getenv("DEMO_MODE", "True").lower() == "true"
-        self.demo_phone = demo_phone or os.getenv("DEMO_PHONE_NUMBER", "+11234567890")
+        # Use demo phone for testing (calls your number instead of real shelter numbers)
+        self.demo_phone = demo_phone or os.getenv("DEMO_PHONE_NUMBER")
+        self.demo_mode = demo_mode
+
+    def get_phone_numbers(self) -> Dict[str, Any]:
+        """Get available phone numbers from Vapi"""
+        try:
+            response = requests.get(
+                f"{self.base_url}/phone-number",
+                headers=self.headers
+            )
+            
+            if response.status_code == 200:
+                return response.json()
+            else:
+                return {"error": f"HTTP {response.status_code}: {response.text}"}
+        except Exception as e:
+            return {"error": str(e)}
 
     def make_shelter_availability_call(self, shelter_phone: str, shelter_name: str) -> Dict[str, Any]:
         """Make a voice call to check shelter availability
@@ -38,35 +54,36 @@ class VapiIntegration:
         print(f"  Calling: {phone_to_call}")
         print(f"  Shelter Name: {shelter_name}")
         
-        # Define the conversation flow
+        # In demo mode, we still make REAL Vapi calls but to your demo number
+        print(f"🎯 DEMO MODE: Making REAL Vapi call to your demo number")
+        print(f"📞 Calling: {phone_to_call}")
+        print(f"🏠 Shelter: {shelter_name}")
+        print(f"🔑 Using API Key: {self.api_key[:10]}...")
+        
+        # Make REAL Vapi call using the correct API format
+        print(f"📞 Making REAL Vapi call to: {phone_to_call}")
+        print(f"🏠 Shelter: {shelter_name}")
+        
+        # Use Vapi's native calling (no Twilio needed - Vapi provides the number)
         conversation = {
-            "type": "outbound",
-            "phoneNumber": phone_to_call,
+            "phoneNumberId": "b07a03cd-a423-480c-b47a-41b40420d8e9",  # Your actual Vapi phone number ID
+            "customer": {
+                "number": phone_to_call
+            },
             "assistant": {
                 "name": "CareLink Assistant",
                 "model": {
                     "provider": "google",
-                    "model": "gemini-1.5-pro",
-                    "systemMessage": f"""
-                    You are calling {shelter_name} to check bed availability for tonight.
-                    Be polite and professional. Ask:
-                    1. How many beds are available tonight?
-                    2. Are there any accessibility accommodations?
-                    3. What services are currently available?
-                    
-                    Keep the call brief and focused.
-                    """
+                    "model": "gemini-1.5-pro"
                 },
                 "voice": {
                     "provider": "vapi",
-                    "voiceId": "sarah"  # Vapi's professional female voice
+                    "voiceId": "Lily"
                 },
                 "firstMessage": f"Hello, this is CareLink calling to check bed availability at {shelter_name} for tonight. Do you have a moment to provide current availability?"
             },
-            "webhook": {
-                "url": "https://your-ngrok-url.ngrok.io/api/vapi/webhook",
-                "events": ["call-ended"]
-            }
+            "maxDurationSeconds": 300,
+            "name": "Shelter Check"  # Shorter name (max 40 chars)
         }
 
         try:
@@ -75,18 +92,64 @@ class VapiIntegration:
                 headers=self.headers,
                 json=conversation
             )
-            response.raise_for_status()
-            return response.json()
+            
+            print(f"📊 Vapi API Response Status: {response.status_code}")
+            print(f"📊 Vapi API Response Headers: {dict(response.headers)}")
+            
+            if response.status_code not in [200, 201]:
+                print(f"❌ Vapi API Error Response: {response.text}")
+                return {"error": f"HTTP {response.status_code}: {response.text}"}
+            
+            result = response.json()
+            print(f"✅ Vapi call successful: {result}")
+            
+            # 201 means call was created and queued
+            if response.status_code == 201:
+                print(f"📞 Call ID: {result.get('id', 'Unknown')}")
+                print(f"📞 Status: {result.get('status', 'Unknown')}")
+                print(f"📞 Customer: {result.get('customer', {}).get('number', 'Unknown')}")
+                print(f"📞 Monitor URL: {result.get('monitor', {}).get('listenUrl', 'No monitor URL')}")
+            
+            # Extract transcription from result if available
+            transcription = "No transcription available"
+            if "transcript" in result:
+                transcription = result["transcript"]
+            elif "transcription" in result:
+                transcription = result["transcription"]
+            elif "messages" in result:
+                # Extract from messages array
+                messages = result.get("messages", [])
+                if messages:
+                    transcription = " ".join([msg.get("content", "") for msg in messages if msg.get("content")])
+            
+            # Return result with transcription
+            return {
+                **result,
+                "transcription": transcription,
+                "call_successful": True
+            }
+            
         except requests.exceptions.RequestException as e:
-            print(f"Error making Vapi call: {e}")
-            return {"error": str(e)}
+            print(f"❌ Error making Vapi call: {e}")
+            return {"error": str(e), "call_successful": False}
 
     def make_social_worker_call(self, social_worker_phone: str, patient_name: str, case_id: str) -> Dict[str, Any]:
         """Make a voice call to confirm social worker assignment"""
         
+        # Use demo phone for testing
+        phone_to_call = self.demo_phone if self.demo_phone else social_worker_phone
+        
+        print(f"📞 Making REAL Vapi call to {phone_to_call}")
+        print(f"👤 Patient: {patient_name}")
+        print(f"📋 Case ID: {case_id}")
+        print(f"🔑 Using API Key: {self.api_key[:10] if self.api_key else 'NOT_SET'}...")
+        
+        if not self.api_key:
+            raise ValueError("VAPI_API_KEY environment variable is required")
+        
         conversation = {
             "type": "outbound",
-            "phoneNumber": social_worker_phone,
+            "phoneNumber": phone_to_call,
             "assistant": {
                 "name": "CareLink Coordinator",
                 "model": {
@@ -129,9 +192,20 @@ class VapiIntegration:
     def make_transport_coordination_call(self, transport_phone: str, pickup_location: str, dropoff_location: str) -> Dict[str, Any]:
         """Make a voice call to coordinate transport"""
         
+        # Use demo phone for testing
+        phone_to_call = self.demo_phone if self.demo_phone else transport_phone
+        
+        print(f"📞 Making REAL Vapi call to {phone_to_call}")
+        print(f"📍 Pickup: {pickup_location}")
+        print(f"📍 Dropoff: {dropoff_location}")
+        print(f"🔑 Using API Key: {self.api_key[:10] if self.api_key else 'NOT_SET'}...")
+        
+        if not self.api_key:
+            raise ValueError("VAPI_API_KEY environment variable is required")
+        
         conversation = {
             "type": "outbound",
-            "phoneNumber": transport_phone,
+            "phoneNumber": phone_to_call,
             "assistant": {
                 "name": "CareLink Transport Coordinator",
                 "model": {
@@ -177,9 +251,20 @@ class VapiIntegration:
     def make_followup_call(self, patient_phone: str, patient_name: str, case_id: str) -> Dict[str, Any]:
         """Make a follow-up call to check on patient after discharge"""
         
+        # Use demo phone for testing
+        phone_to_call = self.demo_phone if self.demo_phone else patient_phone
+        
+        print(f"📞 Making REAL Vapi call to {phone_to_call}")
+        print(f"👤 Patient: {patient_name}")
+        print(f"📋 Case ID: {case_id}")
+        print(f"🔑 Using API Key: {self.api_key[:10] if self.api_key else 'NOT_SET'}...")
+        
+        if not self.api_key:
+            raise ValueError("VAPI_API_KEY environment variable is required")
+        
         conversation = {
             "type": "outbound",
-            "phoneNumber": patient_phone,
+            "phoneNumber": phone_to_call,
             "assistant": {
                 "name": "CareLink Follow-up Coordinator",
                 "model": {
@@ -255,7 +340,7 @@ def handle_vapi_webhook(webhook_data: Dict[str, Any]):
 async def trigger_vapi_calls_for_case(case_id: str, case_data: Dict[str, Any]):
     """Trigger appropriate Vapi calls based on case data"""
     
-    vapi = VapiIntegration(api_key="your_vapi_api_key")
+    vapi = VapiIntegration(api_key="demo_key")
     
     # Call shelter for availability
     if case_data.get("shelter_phone"):

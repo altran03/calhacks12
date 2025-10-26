@@ -32,6 +32,31 @@ class WorkflowUpdate(Model):
 # SHELTER & HOUSING MODELS
 # ============================================
 
+class ShelterAvailabilityData(Model):
+    """Shelter data with MapBox coordinates"""
+    name: str
+    address: str
+    coordinates: List[float]  # [lat, lon]
+    phone: str
+    beds_available: int
+    wheelchair_accessible: bool
+    services: List[str]
+    status: str  # "selected", "available", "unavailable"
+
+class ResourceAddressRequest(Model):
+    """Resource agent requests shelter address for delivery"""
+    case_id: str
+    resource_types: List[str]  # ["food", "hygiene", "clothing"]
+
+class ShelterAddressResponse(Model):
+    """Shelter agent sends address to resource agent"""
+    case_id: str
+    shelter_name: str
+    address: str
+    coordinates: List[float]  # [lat, lon]
+    contact_person: str
+    phone: str
+
 class ShelterMatch(Model):
     case_id: str
     shelter_name: str
@@ -83,6 +108,14 @@ class TransportConfirmation(Model):
 # SOCIAL WORKER MODELS
 # ============================================
 
+class SocialWorkerApproval(Model):
+    """Social worker approval after reviewing discharge form"""
+    case_id: str
+    approved: bool
+    services_needed: List[str]  # ["eligibility_check", "resource_coordination", "shelter_placement"]
+    notes: Optional[str] = None
+    priority_level: str  # "high", "medium", "low"
+
 class SocialWorkerAssignment(Model):
     case_id: str
     social_worker_name: str
@@ -125,6 +158,21 @@ class ResourceMatch(Model):
 # ============================================
 # PHARMACY MODELS
 # ============================================
+
+class HospitalPharmacyCheck(Model):
+    """Request to check hospital pharmacy inventory"""
+    case_id: str
+    patient_name: str
+    medications: List[Dict[str, str]]  # [{"name": "Lisinopril", "dosage": "10mg"}]
+
+class PharmacyInventoryResponse(Model):
+    """Response from hospital pharmacy with inventory status"""
+    case_id: str
+    all_available: bool
+    medications_status: List[Dict[str, Any]]  # [{"name": "Lisinopril", "available": true, "quantity_prepared": 30}]
+    discharge_supply_days: int
+    ready_at_discharge: bool
+    pharmacy_location: str
 
 class PharmacyRequest(Model):
     case_id: str
@@ -239,6 +287,56 @@ class NotificationConfirmation(Model):
     status: str
     delivery_time: str
     method: str  # "email", "sms", "call"
+
+# ============================================
+# MAPBOX VISUALIZATION MODELS
+# ============================================
+
+class MapBoxVisualizationTrigger(Model):
+    """Trigger MapBox visualization from transport agent"""
+    case_id: str
+    pickup_location: Dict[str, Any]  # {"name": "UCSF", "coordinates": [lat, lon]}
+    dropoff_location: Dict[str, Any]  # {"name": "Harbor Light", "coordinates": [lat, lon]}
+    route: Dict[str, Any]  # {"polyline": "...", "distance": "3.2 miles", "duration": "45 min"}
+    transport_details: Dict[str, Any]  # {"driver": "...", "phone": "...", "vehicle": "..."}
+    eta_minutes: int
+
+class VehicleTrackingUpdate(Model):
+    """Real-time vehicle position updates"""
+    case_id: str
+    current_position: List[float]  # [lat, lon]
+    heading: float  # degrees
+    speed: str  # "25 mph"
+    eta_minutes: int
+    timestamp: str
+
+# ============================================
+# LATEX REPORT MODELS
+# ============================================
+
+class FinalReportData(Model):
+    """Data for generating LaTeX PDF report"""
+    case_id: str
+    patient_name: str
+    discharge_date: str
+    hospital: str
+    
+    # All agent responses compiled
+    pharmacy_data: Dict[str, Any]
+    eligibility_data: Dict[str, Any]
+    resource_data: Dict[str, Any]
+    shelter_data: Dict[str, Any]
+    transport_data: Dict[str, Any]
+    
+    # Follow-up information
+    social_worker_name: str
+    social_worker_phone: str
+    follow_up_date: str
+    emergency_contact: str
+    
+    # Generated PDF path
+    pdf_path: Optional[str] = None
+    generated_at: str
 
 # ============================================
 # FINALIZED REPORT MODELS

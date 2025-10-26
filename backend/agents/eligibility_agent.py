@@ -8,6 +8,7 @@ from uagents.setup import fund_agent_if_low
 from .models import (
     EligibilityRequest, EligibilityResult, WorkflowUpdate
 )
+from .agent_registry import get_agent_address, AgentNames
 from typing import Dict, Any, List
 from datetime import datetime
 
@@ -93,9 +94,9 @@ async def handle_eligibility_check(ctx: Context, sender: str, msg: EligibilityRe
             })
             total_monthly_benefits += disability_amount
         
-        # Step 7: Send results back to coordinator
+        # Step 7: Send results back to Social Worker (central hub per workflow)
         await ctx.send(
-            "coordinator_agent_address",
+            get_agent_address(AgentNames.SOCIAL_WORKER),
             EligibilityResult(
                 case_id=msg.case_id,
                 eligible_programs=eligible_programs,
@@ -105,9 +106,9 @@ async def handle_eligibility_check(ctx: Context, sender: str, msg: EligibilityRe
             )
         )
         
-        # Step 8: Update workflow status
+        # Step 8: Update workflow status (report to Social Worker)
         await ctx.send(
-            "coordinator_agent_address",
+            get_agent_address(AgentNames.SOCIAL_WORKER),
             WorkflowUpdate(
                 case_id=msg.case_id,
                 step="eligibility_checked",
@@ -123,10 +124,10 @@ async def handle_eligibility_check(ctx: Context, sender: str, msg: EligibilityRe
             )
         )
         
-        # Step 9: If expedited benefits available, notify social worker
+        # Step 9: If expedited benefits available, notify social worker  
         if any(p.get("program") == "Medi-Cal" for p in eligible_programs):
             await ctx.send(
-                "social_worker_agent_address",
+                get_agent_address(AgentNames.SOCIAL_WORKER),
                 WorkflowUpdate(
                     case_id=msg.case_id,
                     step="benefits_expedited",
@@ -145,7 +146,7 @@ async def handle_eligibility_check(ctx: Context, sender: str, msg: EligibilityRe
     except Exception as e:
         ctx.logger.error(f"Error processing eligibility check for {msg.case_id}: {e}")
         await ctx.send(
-            "coordinator_agent_address",
+            get_agent_address(AgentNames.SOCIAL_WORKER),
             WorkflowUpdate(
                 case_id=msg.case_id,
                 step="eligibility_check",

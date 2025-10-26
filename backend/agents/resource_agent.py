@@ -6,10 +6,17 @@ Handles resource requests, provider matching, and reservation coordination
 from uagents import Agent, Context, Protocol
 from uagents.setup import fund_agent_if_low
 from .models import (
-    ResourceRequest, ResourceMatch, WorkflowUpdate
+    ResourceRequest, ResourceMatch, WorkflowUpdate, ShelterAddressResponse
 )
+from .agent_registry import get_agent_address, AgentNames
 from typing import Dict, Any, List
 from datetime import datetime
+from pydantic import BaseModel
+
+class HealthResponse(BaseModel):
+    status: str
+    agent: str
+    port: int
 
 # Initialize Resource Agent
 resource_agent = Agent(
@@ -22,6 +29,56 @@ resource_agent = Agent(
 
 # Define Resource Protocol for Agentverse deployment
 resource_protocol = Protocol(name="ResourceProtocol", version="1.0.0")
+
+# Add handler to receive shelter address from Shelter Agent
+@resource_protocol.on_message(model=ShelterAddressResponse)
+async def handle_shelter_address(ctx: Context, sender: str, msg: ShelterAddressResponse):
+    """Receive shelter address from Shelter Agent for resource delivery"""
+    print(f"🏠 Resource Agent received shelter address: {msg.shelter_name} at {msg.address}")
+    
+    # Log the conversation
+    conversation_log = {
+        "timestamp": datetime.now().isoformat(),
+        "agent": "resource_agent",
+        "action": "shelter_address_received",
+        "shelter_name": msg.shelter_name,
+        "shelter_address": msg.address,
+        "case_id": msg.case_id,
+        "message": f"Received shelter address for resource delivery coordination"
+    }
+    print(f"📝 RESOURCE CONVERSATION LOG: {conversation_log}")
+    
+    # Store shelter address for resource delivery coordination
+    print(f"📦 Resources will be delivered to {msg.address}")
+    
+    # Log resource coordination
+    coordination_log = {
+        "timestamp": datetime.now().isoformat(),
+        "agent": "resource_agent",
+        "action": "resource_coordination_started",
+        "shelter_name": msg.shelter_name,
+        "shelter_address": msg.address,
+        "case_id": msg.case_id,
+        "message": f"Starting resource delivery coordination for {msg.shelter_name}"
+    }
+    print(f"📝 RESOURCE COORDINATION LOG: {coordination_log}")
+    
+    # Confirm receipt to Social Worker
+    await ctx.send(
+        get_agent_address(AgentNames.SOCIAL_WORKER),
+        WorkflowUpdate(
+            case_id=msg.case_id,
+            step="shelter_address_received",
+            status="info",
+            details={
+                "message": f"Resource delivery address confirmed: {msg.address}",
+                "shelter_name": msg.shelter_name,
+                "coordinates": msg.coordinates
+            },
+            timestamp=datetime.now().isoformat(),
+            conversation_logs=[conversation_log, coordination_log]
+        )
+    )
 
 @resource_protocol.on_message(model=ResourceRequest, replies={WorkflowUpdate})
 async def handle_resource_request(ctx: Context, sender: str, msg: ResourceRequest):
@@ -50,9 +107,9 @@ async def handle_resource_request(ctx: Context, sender: str, msg: ResourceReques
                             "dietary_match": bool(msg.dietary_restrictions)
                         })
                         
-                        # Step 4: Update workflow status
+                        # Step 4: Update workflow status (report to Social Worker)
                         await ctx.send(
-                            "coordinator_agent_address",
+                            get_agent_address(AgentNames.SOCIAL_WORKER),
                             WorkflowUpdate(
                                 case_id=msg.case_id,
                                 step=f"resource_{item_type}_confirmed",
@@ -75,9 +132,9 @@ async def handle_resource_request(ctx: Context, sender: str, msg: ResourceReques
                     # No suitable match found
                     await find_alternative_resources(ctx, msg, item_type)
             else:
-                # No resources found for this item type
+                # No resources found for this item type (report to Social Worker)
                 await ctx.send(
-                    "coordinator_agent_address",
+                    get_agent_address(AgentNames.SOCIAL_WORKER),
                     WorkflowUpdate(
                         case_id=msg.case_id,
                         step=f"resource_{item_type}_search",
@@ -87,10 +144,10 @@ async def handle_resource_request(ctx: Context, sender: str, msg: ResourceReques
                     )
                 )
         
-        # Send summary of confirmed resources
+        # Send summary of confirmed resources (to Social Worker)
         if confirmed_resources:
             await ctx.send(
-                "coordinator_agent_address",
+                get_agent_address(AgentNames.SOCIAL_WORKER),
                 WorkflowUpdate(
                     case_id=msg.case_id,
                     step="resources_summary",
@@ -109,7 +166,7 @@ async def handle_resource_request(ctx: Context, sender: str, msg: ResourceReques
     except Exception as e:
         ctx.logger.error(f"Error processing resource request for {msg.case_id}: {e}")
         await ctx.send(
-            "coordinator_agent_address",
+            get_agent_address(AgentNames.SOCIAL_WORKER),
             WorkflowUpdate(
                 case_id=msg.case_id,
                 step="resource_coordination",
@@ -177,9 +234,9 @@ async def find_alternative_resources(ctx: Context, request: ResourceRequest, ite
             availability = await check_resource_availability(alt_resource, request)
             
             if availability.get("available", False):
-                # Send alternative match
+                # Send alternative match (to Social Worker)
                 await ctx.send(
-                    "coordinator_agent_address",
+                    get_agent_address(AgentNames.SOCIAL_WORKER),
                     WorkflowUpdate(
                         case_id=request.case_id,
                         step=f"alternative_{item_type}_found",
@@ -198,9 +255,9 @@ async def find_alternative_resources(ctx: Context, request: ResourceRequest, ite
         except Exception as e:
             ctx.logger.error(f"Error checking alternative resource: {e}")
     
-    # No alternatives found
+    # No alternatives found (report to Social Worker)
     await ctx.send(
-        "coordinator_agent_address",
+        get_agent_address(AgentNames.SOCIAL_WORKER),
         WorkflowUpdate(
             case_id=request.case_id,
             step=f"{item_type}_search",
@@ -248,6 +305,12 @@ async def check_resource_availability(resource: Dict[str, Any], request: Resourc
         "capacity": "high",
         "dietary_match": True
     }
+
+# Health check endpoint
+@resource_agent.on_rest_get("/health", HealthResponse)
+async def health_check(ctx: Context):
+    """Health check endpoint"""
+    return HealthResponse(status="healthy", agent="resource_agent", port=8007)
 
 # Include protocol with manifest publishing for Agentverse deployment
 resource_agent.include(resource_protocol, publish_manifest=True)

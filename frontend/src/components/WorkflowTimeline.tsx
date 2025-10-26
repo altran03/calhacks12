@@ -23,8 +23,11 @@ import {
   Radio,
   Phone,
   MapPin,
-  ArrowRight
+  ArrowRight,
+  ExternalLink
 } from "lucide-react";
+import AgentMapBox from "./AgentMapBox";
+import CaseWorkflowInterface from "./CaseWorkflowInterface";
 
 interface AgentLog {
   id: string;
@@ -36,6 +39,12 @@ interface AgentLog {
     text: string;
     duration?: string;
   };
+  conversationLogs?: any[];
+  agent?: string;
+  status?: 'info' | 'success' | 'warning' | 'error';
+  details?: any;
+  agentName: string;
+  agentColor: string;
 }
 
 interface Agent {
@@ -57,6 +66,8 @@ const WorkflowTimeline: React.FC = () => {
   const [workflowData, setWorkflowData] = useState<any>(null);
   const [currentPhase, setCurrentPhase] = useState<number>(0); // 0: Parser→Hospital→Coordinator, 1: Shelter+Social, 2: Transport, 3: Others
   const [globalLogs, setGlobalLogs] = useState<Array<AgentLog & { agentName: string; agentColor: string }>>([]);
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+  const [showCaseInterface, setShowCaseInterface] = useState<boolean>(false);
   const shouldPollRef = useRef(true);
   const lastStatusRef = useRef<string>("");
 
@@ -84,6 +95,135 @@ const WorkflowTimeline: React.FC = () => {
       shouldPollRef.current = false;
     };
   }, []);
+
+  // SSE connection for live agent logs
+  useEffect(() => {
+    if (!caseId) return;
+    
+    const storedCaseId = localStorage.getItem('current_case_id');
+    if (!storedCaseId) return;
+    
+    console.log("🔌 Connecting to SSE stream for case:", storedCaseId);
+    
+    const eventSource = new EventSource(`http://localhost:8000/api/workflow-stream/${storedCaseId}`);
+    
+    eventSource.onopen = () => {
+      console.log("✅ SSE connection opened");
+    };
+    
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log("📨 SSE message received:", data);
+        
+        if (data.type === 'timeline_update') {
+          handleTimelineUpdate(data);
+        } else if (data.type === 'agent_log') {
+          handleAgentLog(data);
+        } else if (data.type === 'conversation_log') {
+          handleConversationLog(data);
+        }
+      } catch (error) {
+        console.error("❌ Error parsing SSE message:", error);
+      }
+    };
+    
+    eventSource.onerror = (error) => {
+      console.error("❌ SSE connection error:", error);
+    };
+    
+    return () => {
+      console.log("🔌 Closing SSE connection");
+      eventSource.close();
+    };
+  }, [caseId]);
+
+  const handleTimelineUpdate = (data: any) => {
+    console.log("📝 Timeline update received:", data);
+    
+    // Extract agent-specific logs
+    const agentLogs = data.agent_logs || {};
+    const newLogs: AgentLog[] = [];
+    
+    // Process each agent's logs
+    Object.entries(agentLogs).forEach(([agentName, logs]: [string, any]) => {
+      if (Array.isArray(logs)) {
+        logs.forEach((log: any) => {
+          newLogs.push({
+            id: `${agentName}_${Date.now()}_${Math.random()}`,
+            agent: agentName,
+            message: log.message || log,
+            timestamp: log.timestamp || new Date().toISOString(),
+            type: log.status === 'error' ? 'error' : log.status === 'success' ? 'success' : 'info',
+            status: log.status || 'info',
+            details: log.details || {},
+            conversationLogs: log.conversation_logs || [],
+            agentName: agentName,
+            agentColor: getAgentColorByName(agentName)
+          });
+        });
+      }
+    });
+    
+    // Process conversation logs separately
+    if (data.conversation_logs) {
+      data.conversation_logs.forEach((log: any) => {
+        newLogs.push({
+          id: `conversation_${Date.now()}_${Math.random()}`,
+          agent: log.agent || 'system',
+          message: log.message || log.action,
+          timestamp: log.timestamp || new Date().toISOString(),
+          type: log.action?.includes('error') ? 'error' : 'info',
+          status: log.action?.includes('error') ? 'error' : 'info',
+          details: log,
+          conversationLogs: [log],
+          agentName: log.agent || 'system',
+          agentColor: getAgentColorByName(log.agent || 'system')
+        });
+      });
+    }
+    
+    // Update global logs
+    setGlobalLogs(prev => [...prev, ...newLogs]);
+  };
+
+  const handleAgentLog = (data: any) => {
+    console.log("🤖 Agent log received:", data);
+    
+    const newLog: AgentLog & { agentName: string; agentColor: string } = {
+      id: `agent_${Date.now()}_${Math.random()}`,
+      agent: data.agent || 'unknown',
+      message: data.message || data.action,
+      timestamp: data.timestamp || new Date().toISOString(),
+      type: data.status === 'error' ? 'error' : data.status === 'success' ? 'success' : 'info',
+      status: data.status || 'info',
+      details: data.details || {},
+      conversationLogs: data.conversation_logs || [],
+      agentName: data.agent || 'unknown',
+      agentColor: getAgentColorByName(data.agent || 'unknown')
+    };
+    
+    setGlobalLogs(prev => [...prev, newLog]);
+  };
+
+  const handleConversationLog = (data: any) => {
+    console.log("💬 Conversation log received:", data);
+    
+    const newLog: AgentLog & { agentName: string; agentColor: string } = {
+      id: `conversation_${Date.now()}_${Math.random()}`,
+      agent: data.agent || 'system',
+      message: data.message || data.action,
+      timestamp: data.timestamp || new Date().toISOString(),
+      type: data.action?.includes('error') ? 'error' : 'info',
+      status: data.action?.includes('error') ? 'error' : 'info',
+      details: data,
+      conversationLogs: [data],
+      agentName: data.agent || 'system',
+      agentColor: getAgentColorByName(data.agent || 'unknown')
+    };
+    
+    setGlobalLogs(prev => [...prev, newLog]);
+  };
 
   const fetchWorkflowData = async (currentCaseId: string) => {
     try {
@@ -252,7 +392,9 @@ const WorkflowTimeline: React.FC = () => {
               id: `${agentId}-log-${idx}-${Date.now()}`,
               timestamp: timelineItem.timestamp || new Date().toISOString(),
               message: log,
-              type: isTranscription ? "transcription" : log.includes("✅") ? "success" : log.includes("❌") ? "error" : "info"
+              type: isTranscription ? "transcription" : log.includes("✅") ? "success" : log.includes("❌") ? "error" : "info",
+              agentName: agent.name,
+              agentColor: colors.border
             };
             
             // Parse transcription if present
@@ -338,6 +480,22 @@ const WorkflowTimeline: React.FC = () => {
       case "AnalyticsAgent": return <BarChart3 {...iconProps} />;
       default: return <Brain {...iconProps} />;
     }
+  };
+
+  const getAgentColorByName = (agentName: string): string => {
+    const agentColorMap: Record<string, string> = {
+      'parser_agent': '#8B5CF6',
+      'coordinator_agent': '#3B82F6',
+      'social_worker_agent': '#10B981',
+      'shelter_agent': '#F59E0B',
+      'transport_agent': '#EF4444',
+      'resource_agent': '#8B5CF6',
+      'pharmacy_agent': '#06B6D4',
+      'eligibility_agent': '#84CC16',
+      'analytics_agent': '#F97316',
+      'system': '#6B7575'
+    };
+    return agentColorMap[agentName] || '#6B7575';
   };
 
   const getAgentColor = (type: Agent["type"], status: Agent["status"]) => {
@@ -453,6 +611,16 @@ const WorkflowTimeline: React.FC = () => {
     }
   ];
 
+  // Show case interface if a case is selected
+  if (showCaseInterface && caseId) {
+    return (
+      <CaseWorkflowInterface 
+        caseId={caseId} 
+        onBack={() => setShowCaseInterface(false)} 
+      />
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto">
       {/* Header */}
@@ -473,6 +641,23 @@ const WorkflowTimeline: React.FC = () => {
         <p className="text-lg" style={{ color: '#6B7575' }}>
           Watch AI agents coordinate in real-time to ensure seamless patient care transitions
         </p>
+        
+        {/* Start Coordination Button */}
+        {caseId && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-6"
+          >
+            <button
+              onClick={() => setShowCaseInterface(true)}
+              className="flex items-center space-x-3 px-6 py-3 bg-gradient-to-r from-[#0D7377] to-[#14919B] text-white rounded-lg hover:shadow-lg transition-all duration-300 hover:scale-105"
+            >
+              <ExternalLink className="w-5 h-5" />
+              <span className="font-medium">Open Case Workflow Interface</span>
+            </button>
+          </motion.div>
+        )}
       </motion.div>
 
       {/* Active Case Banner */}
@@ -877,6 +1062,24 @@ const WorkflowTimeline: React.FC = () => {
                           </div>
                         </div>
                       )}
+
+                      {/* Agent-specific MapBox for agents that use maps */}
+                      {(agent.id === "shelter" || agent.id === "transport" || agent.id === "resource") && 
+                       (agent.status === "working" || agent.status === "completed") && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          transition={{ delay: 0.3 }}
+                          className="mt-4"
+                        >
+                          <AgentMapBox
+                            agentType={agent.type}
+                            agentData={agent}
+                            workflowData={workflowData}
+                            className="w-full"
+                          />
+                        </motion.div>
+                      )}
                       
                     <p className="text-xs mt-3" style={{ color: '#6B7575' }}>
                         {agent.lastActivity}
@@ -1054,10 +1257,35 @@ const WorkflowTimeline: React.FC = () => {
                         "{log.transcription.text}"
                       </p>
                     </div>
+                  ) : log.conversationLogs && log.conversationLogs.length > 0 ? (
+                    <div className="space-y-2">
+                      {log.conversationLogs.map((conversationLog: any, idx: number) => (
+                        <div key={idx} className="bg-green-50 p-3 rounded border-l-2 border-green-400">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <Users className="w-4 h-4 text-green-600" />
+                            <span className="text-sm font-medium text-green-800">
+                              {conversationLog.agent}: {conversationLog.action}
+                            </span>
+                          </div>
+                          <div className="text-sm text-green-700 mb-2">
+                            {conversationLog.message}
+                          </div>
+                          {conversationLog.transcription && (
+                            <div className="bg-blue-50 p-2 rounded border-l-2 border-blue-400">
+                              <div className="font-medium text-blue-800 text-xs">Vapi Transcription:</div>
+                              <div className="text-blue-700 text-sm">{conversationLog.transcription}</div>
+                            </div>
+                          )}
+                          <div className="text-xs text-green-600">
+                            {new Date(conversationLog.timestamp).toLocaleTimeString()}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   ) : (
                   <p className="text-sm" style={{ color: '#1A1D1E' }}>
                       {log.message}
-                  </p>
+                    </p>
                   )}
                 </motion.div>
               ))

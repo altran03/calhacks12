@@ -27,6 +27,7 @@ from .models import (
     DocumentParseRequest, PDFProcessingRequest, ParsedDischargeData, 
     AutofillData, WorkflowUpdate
 )
+from .agent_registry import get_agent_address, AgentNames
 from typing import Dict, Any
 from datetime import datetime
 from fastapi import FastAPI, Request
@@ -111,7 +112,7 @@ async def handle_document_parse(ctx: Context, sender: str, msg: DocumentParseReq
         
         # Step 4: Send parsed data to coordinator for autofill
         await ctx.send(
-            "coordinator_agent_address",
+            get_agent_address(AgentNames.COORDINATOR),
             WorkflowUpdate(
                 case_id=msg.case_id,
                 step="document_parsed",
@@ -139,7 +140,7 @@ async def handle_document_parse(ctx: Context, sender: str, msg: DocumentParseReq
     except Exception as e:
         ctx.logger.error(f"Error parsing document for {msg.case_id}: {str(e)}")
         await ctx.send(
-            "coordinator_agent_address",
+            get_agent_address(AgentNames.COORDINATOR),
             WorkflowUpdate(
                 case_id=msg.case_id,
                 step="document_parse",
