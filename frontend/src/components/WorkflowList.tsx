@@ -451,7 +451,7 @@ export default function WorkflowList() {
                             <AnimatePresence>
                               {workflow.timeline.map((event, eventIndex) => (
                                 <motion.div
-                                  key={`${event-${eventIndex}`}
+                                  key={`${event.step}-${eventIndex}`}
                                   initial={{ opacity: 0, y: 20, scale: 0.95 }}
                                   animate={{ opacity: 1, y: 0, scale: 1 }}
                                   exit={{ opacity: 0, y: -20, scale: 0.95 }}
