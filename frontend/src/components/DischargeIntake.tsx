@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   User, 
@@ -149,7 +148,6 @@ interface DischargeIntakeProps {
 }
 
 export default function DischargeIntake({ onWorkflowStarted }: DischargeIntakeProps = {}) {
-  const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
   const [caseId, setCaseId] = useState<string>("");
   const [formData, setFormData] = useState<PatientInfo>({
@@ -227,7 +225,71 @@ export default function DischargeIntake({ onWorkflowStarted }: DischargeIntakePr
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "">("");
+  // State for processing result
+  const [processingResult, setProcessingResult] = useState<{
+    success: boolean;
+    confidence: number;
+    agent: string;
+    port: number;
+  } | null>(null);
+  // State for real data from API
+  const [shelters, setShelters] = useState<any[]>([]);
+  const [transportOptions, setTransportOptions] = useState<any[]>([]);
+  const [benefitsPrograms, setBenefitsPrograms] = useState<any[]>([]);
+  const [communityResources, setCommunityResources] = useState<any[]>([]);
+  const [dataLoaded, setDataLoaded] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Load real data from API
+  useEffect(() => {
+    const fetchRealData = async () => {
+      try {
+        console.log("🔄 Fetching real data from Supabase...");
+        
+        // Fetch all real data in parallel
+        const [sheltersRes, transportRes, benefitsRes, resourcesRes] = await Promise.all([
+          fetch("http://localhost:8000/api/shelters"),
+          fetch("http://localhost:8000/api/transport-options"),
+          fetch("http://localhost:8000/api/benefits-programs"),
+          fetch("http://localhost:8000/api/community-resources")
+        ]);
+
+        if (sheltersRes.ok) {
+          const sheltersData = await sheltersRes.json();
+          setShelters(sheltersData);
+          console.log(`✅ Loaded ${sheltersData.length} real shelters from Supabase`);
+        }
+
+        if (transportRes.ok) {
+          const transportData = await transportRes.json();
+          setTransportOptions(transportData);
+          console.log(`✅ Loaded ${transportData.length} real transport options from Supabase`);
+        }
+
+        if (benefitsRes.ok) {
+          const benefitsData = await benefitsRes.json();
+          setBenefitsPrograms(benefitsData);
+          console.log(`✅ Loaded ${benefitsData.length} real benefits programs from Supabase`);
+        }
+
+        if (resourcesRes.ok) {
+          const resourcesData = await resourcesRes.json();
+          setCommunityResources(resourcesData);
+          console.log(`✅ Loaded ${resourcesData.length} real community resources from Supabase`);
+        }
+
+        setDataLoaded(true);
+        console.log("🎉 All real data loaded successfully!");
+        
+      } catch (error) {
+        console.error("❌ Error fetching real data:", error);
+        setDataLoaded(true); // Still allow form to work with fallbacks
+      }
+    };
+
+    fetchRealData();
+  }, []);
 
   // Load form draft on component mount
   useEffect(() => {
@@ -500,12 +562,22 @@ export default function DischargeIntake({ onWorkflowStarted }: DischargeIntakePr
         });
         
         const confidence = autofillData.confidence_score || 0.85;
-        alert(`✅ PDF processed successfully via Parser Agent!\n\n📊 Confidence Score: ${(confidence * 100).toFixed(0)}%\n🤖 Agent: ${result.agent_used || 'parser_agent'}\n📡 Port: ${result.agent_port || 8011}\n\nForm has been auto-filled with extracted data.`);
+        setProcessingResult({
+          success: true,
+          confidence: confidence,
+          agent: result.agent_used || 'parser_agent',
+          port: result.agent_port || 8011
+        });
       }
       
     } catch (error) {
       console.error("Error processing PDF files:", error);
-      alert("Failed to process PDF files. Please try again.");
+      setProcessingResult({
+        success: false,
+        confidence: 0,
+        agent: '',
+        port: 0
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -518,55 +590,55 @@ export default function DischargeIntake({ onWorkflowStarted }: DischargeIntakePr
       // Prepare payload in the format expected by backend PatientInfo model
       const payload = {
         contact_info: {
-          name: formData.contactInfo?.name || formData.name || "",
-          phone1: formData.contactInfo?.phone1 || "",
-          phone2: formData.contactInfo?.phone2 || "",
-          date_of_birth: formData.contactInfo?.dateOfBirth || formData.dateOfBirth || "",
-          address: formData.contactInfo?.address || "",
-          apartment: formData.contactInfo?.apartment || "",
-          city: formData.contactInfo?.city || "",
-          state: formData.contactInfo?.state || "",
-          zip: formData.contactInfo?.zip || "",
-          emergency_contact_name: formData.contactInfo?.emergencyContactName || "",
-          emergency_contact_relationship: formData.contactInfo?.emergencyContactRelationship || "",
-          emergency_contact_phone: formData.contactInfo?.emergencyContactPhone || "",
+          name: formData.name || "",
+          phone1: formData.phone1 || "",
+          phone2: formData.phone2 || "",
+          date_of_birth: formData.dateOfBirth || "",
+          address: formData.address || "",
+          apartment: formData.apartment || "",
+          city: formData.city || "",
+          state: formData.state || "",
+          zip: formData.zip || "",
+          emergency_contact_name: formData.emergencyContactName || "",
+          emergency_contact_relationship: formData.emergencyContactRelationship || "",
+          emergency_contact_phone: formData.emergencyContactPhone || "",
         },
         discharge_info: {
-          discharging_facility: formData.dischargeInfo?.dischargingFacility || "",
-          discharging_facility_phone: formData.dischargeInfo?.dischargingFacilityPhone || "",
-          facility_address: formData.dischargeInfo?.facilityAddress || "",
-          facility_floor: formData.dischargeInfo?.facilityFloor || "",
-          facility_city: formData.dischargeInfo?.facilityCity || "",
-          facility_state: formData.dischargeInfo?.facilityState || "",
-          facility_zip: formData.dischargeInfo?.facilityZip || "",
-          medical_record_number: formData.dischargeInfo?.medicalRecordNumber || formData.medicalRecordNumber || "",
-          date_of_admission: formData.dischargeInfo?.dateOfAdmission || "",
-          planned_discharge_date: formData.dischargeInfo?.plannedDischargeDate || formData.dischargeDateTime || "",
-          discharged_to: formData.dischargeInfo?.dischargedTo || formData.plannedDestination || "",
-          discharge_address: formData.dischargeInfo?.dischargeAddress || "",
-          discharge_apartment: formData.dischargeInfo?.dischargeApartment || "",
-          discharge_city: formData.dischargeInfo?.dischargeCity || "",
-          discharge_state: formData.dischargeInfo?.dischargeState || "",
-          discharge_zip: formData.dischargeInfo?.dischargeZip || "",
-          discharge_phone: formData.dischargeInfo?.dischargePhone || "",
-          travel_outside_nyc: formData.dischargeInfo?.travelOutsideNyc || false,
-          travel_date_destination: formData.dischargeInfo?.travelDateDestination || "",
+          discharging_facility: formData.dischargingFacility || "",
+          discharging_facility_phone: formData.dischargingFacilityPhone || "",
+          facility_address: formData.facilityAddress || "",
+          facility_floor: formData.facilityFloor || "",
+          facility_city: formData.facilityCity || "",
+          facility_state: formData.facilityState || "",
+          facility_zip: formData.facilityZip || "",
+          medical_record_number: formData.medicalRecordNumber || "",
+          date_of_admission: formData.dateOfAdmission || "",
+          planned_discharge_date: formData.dischargeDateTime || "",
+          discharged_to: formData.plannedDestination || "",
+          discharge_address: formData.dischargeAddress || "",
+          discharge_apartment: formData.dischargeApartment || "",
+          discharge_city: formData.dischargeCity || "",
+          discharge_state: formData.dischargeState || "",
+          discharge_zip: formData.dischargeZip || "",
+          discharge_phone: formData.dischargePhone || "",
+          travel_outside_nyc: formData.travelOutsideNyc || false,
+          travel_date_destination: formData.travelDateDestination || "",
         },
         follow_up: {
-          appointment_date: formData.followUp?.appointmentDate || "",
-          physician_name: formData.followUp?.physicianName || "",
-          physician_phone: formData.followUp?.physicianPhone || "",
-          physician_cell: formData.followUp?.physicianCell || "",
-          physician_address: formData.followUp?.physicianAddress || "",
-          physician_city: formData.followUp?.physicianCity || "",
-          physician_state: formData.followUp?.physicianState || "",
-          physician_zip: formData.followUp?.physicianZip || "",
-          barriers_to_adherence: formData.followUp?.barriersToAdherence || [],
-          physical_disability: formData.followUp?.physicalDisability || "",
-          medical_condition: formData.followUp?.medicalCondition || formData.primaryDiagnosis || "",
-          substance_use: formData.followUp?.substanceUse || "",
-          mental_disorder: formData.followUp?.mentalDisorder || "",
-          other_barriers: formData.followUp?.otherBarriers || "",
+          appointment_date: formData.appointmentDate || "",
+          physician_name: formData.physicianName || "",
+          physician_phone: formData.physicianPhone || "",
+          physician_cell: formData.physicianCell || "",
+          physician_address: formData.physicianAddress || "",
+          physician_city: formData.physicianCity || "",
+          physician_state: formData.physicianState || "",
+          physician_zip: formData.physicianZip || "",
+          barriers_to_adherence: formData.barriersToAdherence || [],
+          physical_disability: formData.physicalDisability || "",
+          medical_condition: formData.primaryDiagnosis || "",
+          substance_use: formData.substanceUse || "",
+          mental_disorder: formData.mentalDisorder || "",
+          other_barriers: formData.otherBarriers || "",
         },
         lab_results: formData.labResults || {
           smear1_date: "",
@@ -583,19 +655,19 @@ export default function DischargeIntake({ onWorkflowStarted }: DischargeIntakePr
           smear3_grade: "",
         },
         treatment_info: {
-          therapy_initiated_date: formData.treatmentInfo?.therapyInitiatedDate || "",
-          therapy_interrupted: formData.treatmentInfo?.therapyInterrupted || false,
-          interruption_reason: formData.treatmentInfo?.interruptionReason || "",
-          medications: formData.treatmentInfo?.medications || {},
-          frequency: formData.treatmentInfo?.frequency || "",
-          central_line_inserted: formData.treatmentInfo?.centralLineInserted || false,
-          days_of_medication_supplied: formData.treatmentInfo?.daysOfMedicationSupplied || "",
-          patient_agreed_to_dot: formData.treatmentInfo?.patientAgreedToDot || false,
-          form_filled_by_name: formData.treatmentInfo?.formFilledByName || formData.staffName || "",
-          form_filled_date: formData.treatmentInfo?.formFilledDate || formData.intakeDate || "",
-          responsible_physician_name: formData.treatmentInfo?.responsiblePhysicianName || "",
-          physician_license_number: formData.treatmentInfo?.physicianLicenseNumber || "",
-          physician_phone: formData.treatmentInfo?.physicianPhone || "",
+          therapy_initiated_date: formData.therapyInitiatedDate || "",
+          therapy_interrupted: formData.therapyInterrupted || false,
+          interruption_reason: formData.interruptionReason || "",
+          medications: formData.medications || {},
+          frequency: formData.frequency || "",
+          central_line_inserted: formData.centralLineInserted || false,
+          days_of_medication_supplied: formData.daysOfMedicationSupplied || "",
+          patient_agreed_to_dot: formData.patientAgreedToDot || false,
+          form_filled_by_name: formData.staffName || "",
+          form_filled_date: formData.intakeDate || "",
+          responsible_physician_name: formData.responsiblePhysicianName || "",
+          physician_license_number: formData.physicianLicenseNumber || "",
+          physician_phone: formData.physicianPhone || "",
         },
       };
 
@@ -627,9 +699,11 @@ export default function DischargeIntake({ onWorkflowStarted }: DischargeIntakePr
         
         console.log("💾 Updated case ID to backend value:", backendCaseId);
         
-        // Redirect to workflow page to watch real-time agent coordination
-        console.log("🔄 Redirecting to workflow page...");
-        router.push(`/workflow/${backendCaseId}`);
+        // Notify parent component to switch to timeline view (Agent Workflow tab)
+        if (onWorkflowStarted) {
+          console.log("🔄 Navigating to Agent Workflow tab...");
+          onWorkflowStarted();
+        }
       } else {
         const error = await response.json();
         console.error("❌ Error submitting discharge:", error);
@@ -643,14 +717,49 @@ export default function DischargeIntake({ onWorkflowStarted }: DischargeIntakePr
     }
   };
 
+  const saveFormDraft = async (formDataToSave: any) => {
+    try {
+      setSaveStatus("saving");
+      const formData = new FormData();
+      formData.append('case_id', caseId);
+      formData.append('form_data', JSON.stringify(formDataToSave));
+      
+      const response = await fetch("http://localhost:8000/api/form-draft/save", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (response.ok) {
+        setSaveStatus("saved");
+        setTimeout(() => setSaveStatus(""), 2000);
+        console.log("✅ Form data saved to database");
+      } else {
+        console.error("❌ Failed to save form data:", response.status);
+      }
+    } catch (error) {
+      console.error("Error saving form draft:", error);
+      setSaveStatus("");
+    }
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
     
-    setFormData(prev => ({
-      ...prev,
+    const newFormData = {
+      ...formData,
       [name]: type === 'checkbox' ? checked : value,
-    }));
+    };
+    
+    setFormData(newFormData);
+    
+    // Debounced auto-save form data to database
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    saveTimeoutRef.current = setTimeout(() => {
+      saveFormDraft(newFormData);
+    }, 1000); // Save after 1 second of no changes
   };
 
   const nextStep = () => {
@@ -1092,6 +1201,66 @@ export default function DischargeIntake({ onWorkflowStarted }: DischargeIntakePr
                       </>
                     )}
                   </motion.button>
+                  
+                  {/* Processing Result Message */}
+                  {processingResult && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`p-6 rounded-xl ${processingResult.success ? 'bg-green-50 border-2 border-green-200' : 'bg-red-50 border-2 border-red-200'}`}
+                    >
+                      {processingResult.success ? (
+                        <div className="space-y-3">
+                          <div className="flex items-center space-x-2">
+                            <CheckCircle className="w-6 h-6 text-green-600" />
+                            <h4 className="font-bold text-green-900 text-lg">
+                              PDF processed successfully via Parser Agent!
+                            </h4>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                            <div className="bg-white p-4 rounded-lg border border-green-200">
+                              <div className="flex items-center space-x-2 mb-1">
+                                <span className="text-2xl">📊</span>
+                                <span className="text-sm font-semibold text-gray-600">Confidence Score</span>
+                              </div>
+                              <p className="text-2xl font-bold text-green-600">
+                                {(processingResult.confidence * 100).toFixed(0)}%
+                              </p>
+                            </div>
+                            <div className="bg-white p-4 rounded-lg border border-green-200">
+                              <div className="flex items-center space-x-2 mb-1">
+                                <span className="text-2xl">🤖</span>
+                                <span className="text-sm font-semibold text-gray-600">Agent</span>
+                              </div>
+                              <p className="text-lg font-bold text-gray-800">
+                                {processingResult.agent}
+                              </p>
+                            </div>
+                            <div className="bg-white p-4 rounded-lg border border-green-200">
+                              <div className="flex items-center space-x-2 mb-1">
+                                <span className="text-2xl">📡</span>
+                                <span className="text-sm font-semibold text-gray-600">Port</span>
+                              </div>
+                              <p className="text-lg font-bold text-gray-800">
+                                {processingResult.port}
+                              </p>
+                            </div>
+                          </div>
+                          <p className="text-green-800 text-sm mt-3">
+                            ✨ Form has been auto-filled with extracted data.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="flex items-center space-x-2">
+                          <X className="w-6 h-6 text-red-600" />
+                          <p className="font-semibold text-red-900">
+                            Failed to process PDF files. Please try again.
+                          </p>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+                  
                   <p className="text-center text-sm" style={{ color: '#6B7575' }}>
                     Click "Next" after processing to review autofilled information
                   </p>
@@ -1306,11 +1475,21 @@ export default function DischargeIntake({ onWorkflowStarted }: DischargeIntakePr
                     className="w-full px-4 py-3"
                   >
                     <option value="">Select destination</option>
-                    <option value="shelter">Shelter</option>
-                    <option value="social_services">Social Services Agency</option>
-                    <option value="residence">Private Residence</option>
-                    <option value="tbd">To Be Determined (AI will coordinate)</option>
-                    <option value="other">Other</option>
+                    {dataLoaded && shelters.length > 0 ? (
+                      shelters.map((shelter, index) => (
+                        <option key={index} value={shelter.name}>
+                          {shelter.name}
+                        </option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="shelter">Shelter (AI will find best match)</option>
+                        <option value="social_services">Social Services Agency</option>
+                        <option value="residence">Private Residence</option>
+                        <option value="tbd">To Be Determined (AI will coordinate)</option>
+                        <option value="other">Other</option>
+                      </>
+                    )}
                   </select>
                 </div>
 
@@ -1321,14 +1500,30 @@ export default function DischargeIntake({ onWorkflowStarted }: DischargeIntakePr
                       🤖 AI Agent will find if blank
                     </span>
                   </label>
-                  <input
-                    type="text"
-                    name="acceptingAgencyName"
-                    value={formData.acceptingAgencyName}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3"
-                    placeholder="Leave blank for AI Shelter Agent to find best match"
-                  />
+                  {dataLoaded && shelters.length > 0 ? (
+                    <select
+                      name="acceptingAgencyName"
+                      value={formData.acceptingAgencyName}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3"
+                    >
+                      <option value="">Select shelter (or leave blank for AI to find best match)</option>
+                      {shelters.map((shelter, index) => (
+                        <option key={index} value={shelter.name}>
+                          {shelter.name}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      name="acceptingAgencyName"
+                      value={formData.acceptingAgencyName}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3"
+                      placeholder="Leave blank for AI Shelter Agent to find best match"
+                    />
+                  )}
                   <p className="text-xs mt-1" style={{ color: '#6B7575' }}>
                     Shelter Agent will query SF shelter database via Bright Data and verify availability
                   </p>
@@ -1375,14 +1570,30 @@ export default function DischargeIntake({ onWorkflowStarted }: DischargeIntakePr
                       🤖 Transport Agent
                     </span>
                   </label>
-                  <input
-                    type="text"
-                    name="transportationArranged"
-                    value={formData.transportationArranged}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3"
-                    placeholder="Leave blank - Transport Agent will schedule wheelchair-accessible vehicle"
-                  />
+                  {dataLoaded && transportOptions.length > 0 ? (
+                    <select
+                      name="transportationArranged"
+                      value={formData.transportationArranged}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3"
+                    >
+                      <option value="">Select transport (or leave blank for AI to arrange)</option>
+                      {transportOptions.map((transport, index) => (
+                        <option key={index} value={transport.provider}>
+                          {transport.provider} - {transport.service_name} ({transport.phone || 'In-app booking'})
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      name="transportationArranged"
+                      value={formData.transportationArranged}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3"
+                      placeholder="Leave blank - Transport Agent will schedule wheelchair-accessible vehicle"
+                    />
+                  )}
                   <p className="text-xs mt-1" style={{ color: '#6B7575' }}>
                     Transport Agent will find providers, schedule pickup, and assign driver via Vapi
                   </p>

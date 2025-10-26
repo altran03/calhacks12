@@ -2,22 +2,22 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import DischargeIntake from "./DischargeIntake";
-import WorkflowTimeline from "./WorkflowTimeline";
+import WorkflowList from "./WorkflowList";
 import MapView from "./MapView";
-import TransportTracker from "./TransportTracker";
 import CaseSummary from "./CaseSummary";
+import FinalizedReport from "./FinalizedReport";
 import { 
   LayoutGrid, 
   FileText, 
   Activity, 
   Map, 
-  Truck,
-  Sparkles
+  Sparkles,
+  CheckCircle2
 } from "lucide-react";
 
 interface DashboardProps {
-  activeView: "dashboard" | "intake" | "timeline" | "map" | "transport";
-  setActiveView: (view: "dashboard" | "intake" | "timeline" | "map" | "transport") => void;
+  activeView: "dashboard" | "intake" | "timeline" | "map" | "report";
+  setActiveView: (view: "dashboard" | "intake" | "timeline" | "map" | "report") => void;
 }
 
 export default function Dashboard({ activeView, setActiveView }: DashboardProps) {
@@ -26,7 +26,7 @@ export default function Dashboard({ activeView, setActiveView }: DashboardProps)
     { id: "intake", label: "Patient Intake", icon: FileText, gradient: "from-[#D17A5C] to-[#E8A87C]" },
     { id: "timeline", label: "Agent Workflow", icon: Activity, gradient: "from-[#2D9F7E] to-[#3DB896]" },
     { id: "map", label: "Resource Map", icon: Map, gradient: "from-[#E8A87C] to-[#F4C490]" },
-    { id: "transport", label: "Transport Hub", icon: Truck, gradient: "from-[#C85C5C] to-[#D17A7A]" },
+    { id: "report", label: "Finalized Report", icon: CheckCircle2, gradient: "from-[#8B5CF6] to-[#A78BFA]" },
   ] as const;
 
   return (
@@ -180,14 +180,14 @@ export default function Dashboard({ activeView, setActiveView }: DashboardProps)
             }}
           />
 
-          {/* Content */}
-          <div className="relative z-10">
-            {activeView === "dashboard" && <CaseSummary />}
-            {activeView === "intake" && <DischargeIntake onWorkflowStarted={() => setActiveView("timeline")} />}
-            {activeView === "timeline" && <WorkflowTimeline />}
-            {activeView === "map" && <MapView />}
-            {activeView === "transport" && <TransportTracker />}
-          </div>
+                 {/* Content */}
+                 <div className="relative z-10">
+                   {activeView === "dashboard" && <CaseSummary />}
+                   {activeView === "intake" && <DischargeIntake onWorkflowStarted={() => setActiveView("timeline")} />}
+                   {activeView === "timeline" && <WorkflowList />}
+                   {activeView === "map" && <MapView />}
+                   {activeView === "report" && <FinalizedReport />}
+                 </div>
         </motion.div>
       </AnimatePresence>
     </div>

@@ -5,7 +5,7 @@ import Dashboard from "@/components/Dashboard";
 import Header from "@/components/Header";
 
 export default function Home() {
-  const [activeView, setActiveView] = useState<"dashboard" | "intake" | "timeline" | "map" | "transport">("dashboard");
+  const [activeView, setActiveView] = useState<"dashboard" | "intake" | "timeline" | "map" | "report">("dashboard");
 
   return (
     <div className="min-h-screen relative">

@@ -239,3 +239,77 @@ class NotificationConfirmation(Model):
     status: str
     delivery_time: str
     method: str  # "email", "sms", "call"
+
+# ============================================
+# FINALIZED REPORT MODELS
+# ============================================
+
+class FinalizedReport(Model):
+    """Comprehensive finalized report for patient and care provider"""
+    case_id: str
+    patient_name: str
+    medical_condition: str
+    discharge_date: str
+    hospital: str
+    
+    # Eligibility Summary
+    eligibility_status: str
+    eligible_programs: List[str]
+    benefits_summary: str
+    
+    # Shelter Assignment
+    shelter_name: str
+    shelter_address: str
+    shelter_phone: str
+    shelter_services: List[str]
+    bed_confirmation: bool
+    
+    # Transport Arrangements
+    transport_provider: str
+    transport_type: str
+    pickup_time: str
+    driver_contact: str
+    accessibility_confirmed: bool
+    
+    # Social Worker Assignment
+    social_worker_name: str
+    social_worker_contact: str
+    case_manager_assigned: str
+    follow_up_scheduled: bool
+    
+    # Resource Package
+    resource_package: List[str]
+    food_vouchers: int
+    hygiene_kit: bool
+    clothing_provided: List[str]
+    medical_equipment: List[str]
+    
+    # Pharmacy Services
+    pharmacy_name: str
+    pharmacy_address: str
+    pharmacy_phone: str
+    medications_ready: bool
+    delivery_arranged: bool
+    
+    # Coordination Summary
+    coordination_status: str
+    all_services_confirmed: bool
+    
+    # Important Notes
+    important_notes: List[str]
+    
+    # Contact Information
+    emergency_contacts: List[Dict[str, str]]
+    
+    # Generated timestamp
+    generated_at: str
+    generated_by: str
+
+class AgentResponse(Model):
+    """Response from individual agents"""
+    agent_name: str
+    case_id: str
+    status: str
+    response_data: Dict[str, Any]
+    timestamp: str
+    error: Optional[str] = None

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   CheckCircle, 
@@ -57,6 +57,8 @@ const WorkflowTimeline: React.FC = () => {
   const [workflowData, setWorkflowData] = useState<any>(null);
   const [currentPhase, setCurrentPhase] = useState<number>(0); // 0: Parser→Hospital→Coordinator, 1: Shelter+Social, 2: Transport, 3: Others
   const [globalLogs, setGlobalLogs] = useState<Array<AgentLog & { agentName: string; agentColor: string }>>([]);
+  const shouldPollRef = useRef(true);
+  const lastStatusRef = useRef<string>("");
 
   useEffect(() => {
     // Get current case ID from localStorage
@@ -69,7 +71,7 @@ const WorkflowTimeline: React.FC = () => {
     
     // Start polling for real workflow data
     const pollInterval = setInterval(() => {
-      if (storedCaseId) {
+      if (storedCaseId && shouldPollRef.current) {
         const isSubmitted = localStorage.getItem(`case_submitted_${storedCaseId}`);
         if (isSubmitted === 'true') {
           fetchWorkflowData(storedCaseId);
@@ -79,6 +81,7 @@ const WorkflowTimeline: React.FC = () => {
     
     return () => {
       clearInterval(pollInterval);
+      shouldPollRef.current = false;
     };
   }, []);
 
@@ -89,9 +92,20 @@ const WorkflowTimeline: React.FC = () => {
         const workflow = await response.json();
         
         if (workflow) {
-          console.log("📊 Workflow data received:", workflow);
+          // Only log on status changes to reduce console spam
+          if (lastStatusRef.current !== workflow.status) {
+            console.log("📊 Workflow status changed:", workflow.status);
+            lastStatusRef.current = workflow.status;
+          }
           setWorkflowData(workflow);
           updateAgentsFromWorkflow(workflow);
+          
+          // Stop polling if workflow is complete
+          if (workflow.status === 'coordinated' || workflow.status === 'completed' || workflow.status === 'error') {
+            console.log("✅ Workflow complete, stopping polling");
+            shouldPollRef.current = false;
+            localStorage.setItem(`case_submitted_${currentCaseId}`, 'false');
+          }
         }
       }
     } catch (error) {

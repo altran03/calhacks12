@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Users, Phone, Clock, CheckCircle, AlertCircle } from "lucide-react";
+import { MapPin, Users, Phone, Clock, CheckCircle, AlertCircle, Truck } from "lucide-react";
 
 // Mapbox CSS
 import "mapbox-gl/dist/mapbox-gl.css";
