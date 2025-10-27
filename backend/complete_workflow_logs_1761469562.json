@@ -1,0 +1,350 @@
+{
+  "case_id": "WORKFLOW_TEST_1761469461",
+  "patient": {
+    "contact_info": {
+      "name": "John Doe",
+      "phone1": "+14089167303",
+      "phone2": null,
+      "date_of_birth": "1980-01-01",
+      "address": "123 Main St",
+      "apartment": null,
+      "city": "San Francisco",
+      "state": "CA",
+      "zip": "94102",
+      "emergency_contact_name": null,
+      "emergency_contact_relationship": null,
+      "emergency_contact_phone": null
+    },
+    "discharge_info": {
+      "discharging_facility": "San Francisco General Hospital",
+      "discharging_facility_phone": null,
+      "facility_address": "1001 Potrero Ave",
+      "facility_floor": null,
+      "facility_city": "San Francisco",
+      "facility_state": "CA",
+      "facility_zip": "94110",
+      "medical_record_number": "MR123456",
+      "date_of_admission": "2025-01-25",
+      "planned_discharge_date": "2025-01-26",
+      "discharged_to": "Shelter",
+      "discharge_address": null,
+      "discharge_apartment": null,
+      "discharge_city": null,
+      "discharge_state": null,
+      "discharge_zip": null,
+      "discharge_phone": null,
+      "travel_outside_nyc": false,
+      "travel_date_destination": null
+    },
+    "follow_up": {
+      "appointment_date": "2025-01-28",
+      "physician_name": null,
+      "physician_phone": null,
+      "physician_cell": null,
+      "physician_address": null,
+      "physician_city": null,
+      "physician_state": null,
+      "physician_zip": null,
+      "barriers_to_adherence": [],
+      "physical_disability": null,
+      "medical_condition": null,
+      "substance_use": null,
+      "mental_disorder": null,
+      "other_barriers": null
+    },
+    "lab_results": {
+      "smear1_date": null,
+      "smear1_source": null,
+      "smear1_result": null,
+      "smear1_grade": null,
+      "smear2_date": null,
+      "smear2_source": null,
+      "smear2_result": null,
+      "smear2_grade": null,
+      "smear3_date": null,
+      "smear3_source": null,
+      "smear3_result": null,
+      "smear3_grade": null
+    },
+    "treatment_info": {
+      "therapy_initiated_date": "2025-01-25",
+      "therapy_interrupted": false,
+      "interruption_reason": null,
+      "medications": {
+        "Methadone": {
+          "prescribed": true,
+          "dosage": "50mg",
+          "type": "daily"
+        }
+      },
+      "frequency": "daily",
+      "central_line_inserted": false,
+      "days_of_medication_supplied": "7",
+      "patient_agreed_to_dot": true,
+      "form_filled_by_name": null,
+      "form_filled_date": null,
+      "responsible_physician_name": null,
+      "physician_license_number": null,
+      "physician_phone": null
+    }
+  },
+  "workflow": {
+    "case_id": "WORKFLOW_TEST_1761469461",
+    "patient": {
+      "contact_info": {
+        "name": "John Doe",
+        "phone1": "+14089167303",
+        "phone2": null,
+        "date_of_birth": "1980-01-01",
+        "address": "123 Main St",
+        "apartment": null,
+        "city": "San Francisco",
+        "state": "CA",
+        "zip": "94102",
+        "emergency_contact_name": null,
+        "emergency_contact_relationship": null,
+        "emergency_contact_phone": null
+      },
+      "discharge_info": {
+        "discharging_facility": "San Francisco General Hospital",
+        "discharging_facility_phone": null,
+        "facility_address": "1001 Potrero Ave",
+        "facility_floor": null,
+        "facility_city": "San Francisco",
+        "facility_state": "CA",
+        "facility_zip": "94110",
+        "medical_record_number": "MR123456",
+        "date_of_admission": "2025-01-25",
+        "planned_discharge_date": "2025-01-26",
+        "discharged_to": "Shelter",
+        "discharge_address": null,
+        "discharge_apartment": null,
+        "discharge_city": null,
+        "discharge_state": null,
+        "discharge_zip": null,
+        "discharge_phone": null,
+        "travel_outside_nyc": false,
+        "travel_date_destination": null
+      },
+      "follow_up": {
+        "appointment_date": "2025-01-28",
+        "physician_name": null,
+        "physician_phone": null,
+        "physician_cell": null,
+        "physician_address": null,
+        "physician_city": null,
+        "physician_state": null,
+        "physician_zip": null,
+        "barriers_to_adherence": [],
+        "physical_disability": null,
+        "medical_condition": null,
+        "substance_use": null,
+        "mental_disorder": null,
+        "other_barriers": null
+      },
+      "lab_results": {
+        "smear1_date": null,
+        "smear1_source": null,
+        "smear1_result": null,
+        "smear1_grade": null,
+        "smear2_date": null,
+        "smear2_source": null,
+        "smear2_result": null,
+        "smear2_grade": null,
+        "smear3_date": null,
+        "smear3_source": null,
+        "smear3_result": null,
+        "smear3_grade": null
+      },
+      "treatment_info": {
+        "therapy_initiated_date": "2025-01-25",
+        "therapy_interrupted": false,
+        "interruption_reason": null,
+        "medications": {
+          "Methadone": {
+            "prescribed": true,
+            "dosage": "50mg",
+            "type": "daily"
+          }
+        },
+        "frequency": "daily",
+        "central_line_inserted": false,
+        "days_of_medication_supplied": "7",
+        "patient_agreed_to_dot": true,
+        "form_filled_by_name": null,
+        "form_filled_date": null,
+        "responsible_physician_name": null,
+        "physician_license_number": null,
+        "physician_phone": null
+      }
+    },
+    "status": "completed",
+    "current_step": "discharge_plan_ready",
+    "shelter": null,
+    "transport": null,
+    "social_worker": null,
+    "timeline": [
+      {
+        "step": "shelter_agent_initiated",
+        "status": "in_progress",
+        "description": "\ud83c\udfe0 Shelter Agent processing request",
+        "logs": [
+          "\ud83d\udce8 Received ShelterMatch for Harbor Light Center",
+          "\ud83d\udccd Address: 1275 Howard St, San Francisco, CA 94103",
+          "\ud83d\udecf\ufe0f Available beds: 12",
+          "\u267f Accessibility: Yes"
+        ],
+        "agent": "shelter_agent",
+        "timestamp": "2025-10-26T02:04:21.853572"
+      },
+      {
+        "step": "vapi_call_failed",
+        "status": "failed",
+        "description": "\u274c Vapi call failed",
+        "logs": [
+          "\ud83d\udcde Call could not be completed"
+        ],
+        "agent": "shelter_agent",
+        "timestamp": "2025-10-26T02:05:51.609156"
+      },
+      {
+        "step": "transport_agent_processing",
+        "status": "in_progress",
+        "description": "\ud83d\ude97 Transport Agent processing request",
+        "logs": [
+          "\ud83d\udce8 Received TransportRequest for John Doe",
+          "\ud83d\udccd Pickup: 1001 Potrero Ave",
+          "\ud83d\udccd Dropoff: 1275 Howard St, San Francisco, CA 94103",
+          "\u267f Accessibility: Required"
+        ],
+        "agent": "transport_agent",
+        "timestamp": "2025-10-26T02:05:51.610022"
+      },
+      {
+        "step": "transport_confirmed",
+        "status": "completed",
+        "description": "\u2705 Transport scheduled successfully",
+        "logs": [
+          "\ud83d\ude97 Driver: Mike Johnson",
+          "\ud83d\udcde Contact: (415) 555-1234",
+          "\u23f0 Pickup time: 2:30 PM",
+          "\ud83d\ude90 Vehicle: Wheelchair accessible van"
+        ],
+        "agent": "transport_agent",
+        "timestamp": "2025-10-26T02:05:53.611788"
+      },
+      {
+        "step": "resource_agent_processing",
+        "status": "in_progress",
+        "description": "\ud83d\udce6 Resource Agent coordinating supplies",
+        "logs": [
+          "\ud83d\udce8 Received ResourceRequest for John Doe",
+          "\ud83c\udf92 Items: hygiene_kit, clothing, food_supplies",
+          "\ud83d\udccd Location: 1275 Howard St, San Francisco, CA 94103",
+          "\ud83c\udf7d\ufe0f Dietary restrictions: None"
+        ],
+        "agent": "resource_agent",
+        "timestamp": "2025-10-26T02:05:53.612271"
+      },
+      {
+        "step": "resources_confirmed",
+        "status": "completed",
+        "description": "\u2705 Resources coordinated successfully",
+        "logs": [
+          "\ud83c\udf92 Care package prepared",
+          "\ud83e\uddf4 Hygiene kit included",
+          "\ud83d\udc55 Clothing (size M) ready",
+          "\ud83c\udf7d\ufe0f 3-day food supply"
+        ],
+        "agent": "resource_agent",
+        "timestamp": "2025-10-26T02:05:55.613546"
+      },
+      {
+        "step": "pharmacy_agent_processing",
+        "status": "in_progress",
+        "description": "\ud83d\udc8a Pharmacy Agent coordinating medications",
+        "logs": [
+          "\ud83d\udce8 Received PharmacyRequest for John Doe",
+          "\ud83d\udc8a Medications: 2 prescriptions",
+          "\ud83d\udccd Location: 1275 Howard St, San Francisco, CA 94103",
+          "\u267f Accessibility: Wheelchair accessible pickup"
+        ],
+        "agent": "pharmacy_agent",
+        "timestamp": "2025-10-26T02:05:55.614105"
+      },
+      {
+        "step": "pharmacy_confirmed",
+        "status": "completed",
+        "description": "\u2705 Medications coordinated successfully",
+        "logs": [
+          "\ud83d\udc8a Methadone 50mg daily - 7 days supply",
+          "\ud83d\udc8a Multivitamin daily - 30 days supply",
+          "\ud83d\udce6 Prescriptions ready for pickup",
+          "\ud83c\udfe5 Pharmacy: CVS on Mission St"
+        ],
+        "agent": "pharmacy_agent",
+        "timestamp": "2025-10-26T02:05:57.615762"
+      },
+      {
+        "step": "eligibility_agent_processing",
+        "status": "in_progress",
+        "description": "\ud83d\udccb Eligibility Agent verifying benefits",
+        "logs": [
+          "\ud83d\udce8 Received EligibilityRequest for John Doe",
+          "\ud83d\udcc5 DOB: 1980-01-01",
+          "\ud83d\udcb3 Current benefits: Medicaid, SNAP",
+          "\ud83c\udfe0 Location: San Francisco, CA"
+        ],
+        "agent": "eligibility_agent",
+        "timestamp": "2025-10-26T02:05:57.616348"
+      },
+      {
+        "step": "eligibility_confirmed",
+        "status": "completed",
+        "description": "\u2705 Benefits verified successfully",
+        "logs": [
+          "\ud83d\udcb3 Medicaid: Active and current",
+          "\ud83c\udf7d\ufe0f SNAP: $194/month available",
+          "\ud83c\udfe0 Housing assistance: Eligible",
+          "\ud83d\udc8a Prescription coverage: 100%"
+        ],
+        "agent": "eligibility_agent",
+        "timestamp": "2025-10-26T02:05:59.617614"
+      },
+      {
+        "step": "social_worker_review",
+        "status": "in_progress",
+        "description": "\ud83d\udc65 Social Worker Agent final review",
+        "logs": [
+          "\ud83d\udce8 Received SocialWorkerAssignment for case WORKFLOW_TEST_1761469461",
+          "\ud83d\udc64 Social Worker: Sarah Johnson",
+          "\ud83d\udcde Contact: (415) 555-5678",
+          "\ud83c\udfe2 Department: Homeless Services"
+        ],
+        "agent": "social_worker_agent",
+        "timestamp": "2025-10-26T02:05:59.618106"
+      },
+      {
+        "step": "discharge_plan_created",
+        "status": "completed",
+        "description": "\ud83d\udcc4 Professional discharge plan created",
+        "logs": [
+          "\ud83d\udccb Comprehensive discharge plan generated",
+          "\ud83c\udfe0 Shelter: Harbor Light Center confirmed",
+          "\ud83d\ude97 Transport: Scheduled with Mike Johnson",
+          "\ud83d\udce6 Resources: Care package ready",
+          "\ud83d\udc8a Medications: Prescriptions coordinated",
+          "\ud83d\udcb3 Benefits: Medicaid and SNAP verified"
+        ],
+        "agent": "social_worker_agent",
+        "timestamp": "2025-10-26T02:06:02.619706",
+        "discharge_plan": "\n# DISCHARGE PLAN - CASE WORKFLOW_TEST_1761469461\n## San Francisco General Hospital\n### Patient: John Doe\n### Date: October 26, 2025\n\n---\n\n## PATIENT INFORMATION\n- **Name**: John Doe\n- **DOB**: 1980-01-01\n- **MRN**: MR123456\n- **Admission Date**: 2025-01-25\n- **Discharge Date**: 2025-01-26\n\n## MEDICAL SUMMARY\n- **Primary Diagnosis**: Homelessness with substance use disorder\n- **Medications**: \n  - Methadone 50mg daily (7-day supply)\n  - Multivitamin daily (30-day supply)\n- **Allergies**: None known\n- **Mobility**: Wheelchair accessible required\n\n## DISCHARGE DESTINATION\n- **Facility**: Harbor Light Center\n- **Address**: 1275 Howard St, San Francisco, CA 94103\n- **Contact**: Shelter Coordinator\n- **Availability**: Confirmed via phone call\n- **Accessibility**: Wheelchair accessible\n\n## SHELTER VERIFICATION CALL TRANSCRIPT\n```\nAI: Hello. This is CareLink. Calling from San Francisco General Hospital. We have a homeless patient being discharged tonight and need to check if you have available beds and can accommodate them. You have a moment to discuss? Capacity and services?\nUser: That's Yes. We have available beds. Have 37 beds available. Yes. We have meal plan just for you to accommodate anybody in a wheelchair. Yes. We could accommodate to anyone of any background. Yes. We could pick up a patient from hospital Yes. We could pick a patient tonight. I'm really busy, so I'll see you. But, yes, to all your questions.\nAI: Thanks for the info summary. Beds available tonight, 37. Wheelchair accessibility. Yes. A meals plan accommodated for wheelchair users. Accept patient tonight. Yes. Transportation pickup. Yes. Services. Able to accommodate any patient background? We'll coordinate arrival. Thanks again, and have a great day.\n\n```\n\n## TRANSPORTATION\n- **Driver**: Mike Johnson\n- **Contact**: (415) 555-1234\n- **Vehicle**: Wheelchair accessible van\n- **Pickup Time**: 2:30 PM\n- **Route**: Hospital \u2192 Harbor Light Center\n\n## RESOURCES PROVIDED\n- Hygiene kit\n- Clothing (size M)\n- 3-day food supply\n- Prescription medications\n\n## BENEFITS VERIFICATION\n- **Medicaid**: Active and current\n- **SNAP**: $194/month available\n- **Housing Assistance**: Eligible\n- **Prescription Coverage**: 100%\n\n## SOCIAL WORKER ASSIGNMENT\n- **Social Worker**: Sarah Johnson\n- **Department**: Homeless Services\n- **Contact**: (415) 555-5678\n- **Priority**: High\n- **Follow-up**: Within 48 hours\n\n## FOLLOW-UP PLAN\n1. **Immediate**: Transport to Harbor Light Center\n2. **24 hours**: Social worker check-in\n3. **48 hours**: Medication compliance review\n4. **1 week**: Housing assessment\n5. **2 weeks**: Benefits application assistance\n\n## SPECIAL INSTRUCTIONS\n- Patient requires wheelchair accessible facilities\n- Methadone maintenance program enrollment\n- Housing assistance application pending\n- Regular follow-up with social worker\n\n---\n*This discharge plan was generated by the CareLink Multi-Agent System*\n*Generated on: October 26, 2025 at 02:06 AM*\n"
+      }
+    ],
+    "ai_analysis": null,
+    "created_at": "2025-10-26 02:04:21.853473",
+    "updated_at": "2025-10-26 02:04:21.853477"
+  },
+  "discharge_plan": "\n# DISCHARGE PLAN - CASE WORKFLOW_TEST_1761469461\n## San Francisco General Hospital\n### Patient: John Doe\n### Date: October 26, 2025\n\n---\n\n## PATIENT INFORMATION\n- **Name**: John Doe\n- **DOB**: 1980-01-01\n- **MRN**: MR123456\n- **Admission Date**: 2025-01-25\n- **Discharge Date**: 2025-01-26\n\n## MEDICAL SUMMARY\n- **Primary Diagnosis**: Homelessness with substance use disorder\n- **Medications**: \n  - Methadone 50mg daily (7-day supply)\n  - Multivitamin daily (30-day supply)\n- **Allergies**: None known\n- **Mobility**: Wheelchair accessible required\n\n## DISCHARGE DESTINATION\n- **Facility**: Harbor Light Center\n- **Address**: 1275 Howard St, San Francisco, CA 94103\n- **Contact**: Shelter Coordinator\n- **Availability**: Confirmed via phone call\n- **Accessibility**: Wheelchair accessible\n\n## SHELTER VERIFICATION CALL TRANSCRIPT\n```\nAI: Hello. This is CareLink. Calling from San Francisco General Hospital. We have a homeless patient being discharged tonight and need to check if you have available beds and can accommodate them. You have a moment to discuss? Capacity and services?\nUser: That's Yes. We have available beds. Have 37 beds available. Yes. We have meal plan just for you to accommodate anybody in a wheelchair. Yes. We could accommodate to anyone of any background. Yes. We could pick up a patient from hospital Yes. We could pick a patient tonight. I'm really busy, so I'll see you. But, yes, to all your questions.\nAI: Thanks for the info summary. Beds available tonight, 37. Wheelchair accessibility. Yes. A meals plan accommodated for wheelchair users. Accept patient tonight. Yes. Transportation pickup. Yes. Services. Able to accommodate any patient background? We'll coordinate arrival. Thanks again, and have a great day.\n\n```\n\n## TRANSPORTATION\n- **Driver**: Mike Johnson\n- **Contact**: (415) 555-1234\n- **Vehicle**: Wheelchair accessible van\n- **Pickup Time**: 2:30 PM\n- **Route**: Hospital \u2192 Harbor Light Center\n\n## RESOURCES PROVIDED\n- Hygiene kit\n- Clothing (size M)\n- 3-day food supply\n- Prescription medications\n\n## BENEFITS VERIFICATION\n- **Medicaid**: Active and current\n- **SNAP**: $194/month available\n- **Housing Assistance**: Eligible\n- **Prescription Coverage**: 100%\n\n## SOCIAL WORKER ASSIGNMENT\n- **Social Worker**: Sarah Johnson\n- **Department**: Homeless Services\n- **Contact**: (415) 555-5678\n- **Priority**: High\n- **Follow-up**: Within 48 hours\n\n## FOLLOW-UP PLAN\n1. **Immediate**: Transport to Harbor Light Center\n2. **24 hours**: Social worker check-in\n3. **48 hours**: Medication compliance review\n4. **1 week**: Housing assessment\n5. **2 weeks**: Benefits application assistance\n\n## SPECIAL INSTRUCTIONS\n- Patient requires wheelchair accessible facilities\n- Methadone maintenance program enrollment\n- Housing assistance application pending\n- Regular follow-up with social worker\n\n---\n*This discharge plan was generated by the CareLink Multi-Agent System*\n*Generated on: October 26, 2025 at 02:06 AM*\n",
+  "timestamp": "2025-10-26T02:06:02.620531"
+}

@@ -1,0 +1,213 @@
+{
+  "case_id": "CONVERSATION_TEST_1761467238",
+  "total_interactions": 9,
+  "agents_involved": [
+    "system",
+    "coordinator_agent",
+    "shelter_agent",
+    "social_worker_agent",
+    "transport_agent",
+    "resource_agent"
+  ],
+  "conversation_logs": [
+    {
+      "timestamp": "2025-10-26T01:27:18.237172",
+      "from_agent": "system",
+      "to_agent": "coordinator_agent",
+      "message_type": "DischargeRequest",
+      "content": {
+        "case_id": "CONVERSATION_TEST_1761467238",
+        "patient": "Test Patient"
+      },
+      "conversation_id": "CONVERSATION_TEST_1761467238"
+    },
+    {
+      "timestamp": "2025-10-26T01:27:18.237408",
+      "from_agent": "coordinator_agent",
+      "to_agent": "shelter_agent",
+      "message_type": "ShelterMatch",
+      "content": {
+        "case_id": "CONVERSATION_TEST_1761467238",
+        "shelter_name": "Harbor Light Center",
+        "address": "1275 Howard St, San Francisco, CA 94103",
+        "available_beds": 12,
+        "accessibility": true,
+        "services": [
+          "medical_respite",
+          "wheelchair_access",
+          "case_management"
+        ],
+        "phone": "(415) 555-0000",
+        "patient_context": null
+      },
+      "conversation_id": "CONVERSATION_TEST_1761467238"
+    },
+    {
+      "timestamp": "2025-10-26T01:27:18.237440",
+      "from_agent": "shelter_agent",
+      "to_agent": "coordinator_agent",
+      "message_type": "ShelterConfirmation",
+      "content": {
+        "case_id": "CONVERSATION_TEST_1761467238",
+        "shelter_name": "Harbor Light Center",
+        "status": "confirmed",
+        "bed_reserved": true,
+        "accessibility_confirmed": true,
+        "conversation_logs": [
+          {
+            "action": "shelter_availability_check",
+            "message": "Checking shelter availability",
+            "timestamp": "2025-10-26T01:27:18.237428",
+            "status": "completed"
+          },
+          {
+            "action": "accessibility_verification",
+            "message": "Verifying accessibility requirements",
+            "timestamp": "2025-10-26T01:27:18.237432",
+            "status": "completed"
+          },
+          {
+            "action": "bed_reservation",
+            "message": "Reserving bed for patient",
+            "timestamp": "2025-10-26T01:27:18.237435",
+            "status": "completed"
+          }
+        ]
+      },
+      "conversation_id": "CONVERSATION_TEST_1761467238"
+    },
+    {
+      "timestamp": "2025-10-26T01:27:18.237548",
+      "from_agent": "coordinator_agent",
+      "to_agent": "transport_agent",
+      "message_type": "TransportRequest",
+      "content": {
+        "case_id": "CONVERSATION_TEST_1761467238",
+        "pickup_location": "San Francisco General Hospital",
+        "dropoff_location": "1275 Howard St, San Francisco, CA 94103",
+        "accessibility_required": true,
+        "urgency": "standard",
+        "patient_name": "Test Patient",
+        "estimated_time": null
+      },
+      "conversation_id": "CONVERSATION_TEST_1761467238"
+    },
+    {
+      "timestamp": "2025-10-26T01:27:18.237575",
+      "from_agent": "transport_agent",
+      "to_agent": "coordinator_agent",
+      "message_type": "TransportConfirmation",
+      "content": {
+        "case_id": "CONVERSATION_TEST_1761467238",
+        "transport_provider": "Paratransit",
+        "pickup_time": "2024-01-15T14:00:00Z",
+        "driver_name": "John Smith",
+        "vehicle_type": "Wheelchair Accessible Van",
+        "conversation_logs": [
+          {
+            "action": "transport_provider_search",
+            "message": "Searching for accessible transport providers",
+            "timestamp": "2025-10-26T01:27:18.237566",
+            "status": "completed"
+          },
+          {
+            "action": "schedule_transport",
+            "message": "Scheduling transport pickup",
+            "timestamp": "2025-10-26T01:27:18.237570",
+            "status": "completed"
+          }
+        ]
+      },
+      "conversation_id": "CONVERSATION_TEST_1761467238"
+    },
+    {
+      "timestamp": "2025-10-26T01:27:18.237677",
+      "from_agent": "coordinator_agent",
+      "to_agent": "social_worker_agent",
+      "message_type": "SocialWorkerAssignment",
+      "content": {
+        "case_id": "CONVERSATION_TEST_1761467238",
+        "social_worker_name": "Jane Smith",
+        "contact_phone": "(415) 555-0001",
+        "department": "Social Services",
+        "specialization": null
+      },
+      "conversation_id": "CONVERSATION_TEST_1761467238"
+    },
+    {
+      "timestamp": "2025-10-26T01:27:18.237699",
+      "from_agent": "social_worker_agent",
+      "to_agent": "coordinator_agent",
+      "message_type": "SocialWorkerConfirmation",
+      "content": {
+        "case_id": "CONVERSATION_TEST_1761467238",
+        "social_worker_name": "Jane Smith",
+        "contact_phone": "(415) 555-0001",
+        "department": "Social Services",
+        "availability": "available",
+        "first_contact_date": "2024-01-15",
+        "case_priority": "high",
+        "conversation_logs": [
+          {
+            "action": "social_worker_assignment",
+            "message": "Assigning social worker to case",
+            "timestamp": "2025-10-26T01:27:18.237691",
+            "status": "completed"
+          },
+          {
+            "action": "case_priority_assessment",
+            "message": "Assessing case priority level",
+            "timestamp": "2025-10-26T01:27:18.237695",
+            "status": "completed"
+          }
+        ]
+      },
+      "conversation_id": "CONVERSATION_TEST_1761467238"
+    },
+    {
+      "timestamp": "2025-10-26T01:27:18.238114",
+      "from_agent": "coordinator_agent",
+      "to_agent": "resource_agent",
+      "message_type": "ResourceRequest",
+      "content": {
+        "case_id": "CONVERSATION_TEST_1761467238",
+        "patient_name": "Test Patient",
+        "dietary_restrictions": null,
+        "allergies": null,
+        "needed_items": [
+          "food",
+          "hygiene_kit",
+          "clothing"
+        ],
+        "location": "1275 Howard St, San Francisco, CA 94103",
+        "urgency": "standard"
+      },
+      "conversation_id": "CONVERSATION_TEST_1761467238"
+    },
+    {
+      "timestamp": "2025-10-26T01:27:18.238145",
+      "from_agent": "resource_agent",
+      "to_agent": "coordinator_agent",
+      "message_type": "ResourceConfirmation",
+      "content": {
+        "case_id": "CONVERSATION_TEST_1761467238",
+        "resources_coordinated": [
+          "food",
+          "hygiene_kit",
+          "clothing"
+        ],
+        "delivery_scheduled": "2024-01-15T16:00:00Z",
+        "conversation_logs": [
+          {
+            "action": "resource_coordination",
+            "message": "Coordinating basic necessities",
+            "timestamp": "2025-10-26T01:27:18.238139",
+            "status": "completed"
+          }
+        ]
+      },
+      "conversation_id": "CONVERSATION_TEST_1761467238"
+    }
+  ],
+  "timestamp": "2025-10-26T01:27:18.238211"
+}

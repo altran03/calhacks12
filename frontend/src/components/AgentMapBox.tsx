@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import { MapPin, Navigation, Clock, Truck, Home, Users } from "lucide-react";
+import { mockAgentData, generateRandomRoute } from "../utils/mockData";
 
 // Mapbox CSS
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -52,6 +53,7 @@ const AgentMapBox: React.FC<AgentMapBoxProps> = ({
     latitude: 37.7749,
     zoom: 12
   });
+  const [showRoute, setShowRoute] = useState(false);
 
   // Get MapBox token from environment
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -61,6 +63,25 @@ const AgentMapBox: React.FC<AgentMapBoxProps> = ({
       generateAgentMapData(agentType, workflowData);
     }
   }, [agentType, workflowData]);
+
+  // Listen for navigation to report to show route
+  useEffect(() => {
+    const handleNavigateToReport = () => {
+      setShowRoute(true);
+    };
+
+    const handleStartCoordination = () => {
+      setShowRoute(false);
+    };
+
+    window.addEventListener('navigateToReport', handleNavigateToReport);
+    window.addEventListener('startCoordination', handleStartCoordination);
+    
+    return () => {
+      window.removeEventListener('navigateToReport', handleNavigateToReport);
+      window.removeEventListener('startCoordination', handleStartCoordination);
+    };
+  }, []);
 
   const generateAgentMapData = (type: string, workflow: any) => {
     const baseData = {
@@ -110,7 +131,7 @@ const AgentMapBox: React.FC<AgentMapBoxProps> = ({
         break;
 
       case "TransportAgent":
-        // Show transport route with real coordinates
+        // Show transport route with mock data and random routing
         if (workflow.transport) {
           const hospitalCoords = workflow.transport.route?.[0] || [37.7625, -122.4580];
           const shelterCoords = workflow.transport.route?.[workflow.transport.route.length - 1] || [37.7749, -122.4194];
@@ -138,6 +159,46 @@ const AgentMapBox: React.FC<AgentMapBoxProps> = ({
             driver: workflow.transport.driver_name || "Michael Rodriguez",
             phone: workflow.transport.driver_phone || "(415) 555-0200",
             vehicle_type: workflow.transport.vehicle_type || "Wheelchair-accessible van",
+            license_plate: "CA 7ABC123"
+          };
+        } else {
+          // Use mock data with hardcoded route
+          const hospitalLocation = { lat: 37.7749, lng: -122.4194 };
+          const shelterLocation = { lat: mockAgentData.shelter.location.lat, lng: mockAgentData.shelter.location.lng };
+          
+          // Hardcoded route from SF General Hospital to Harbor Light Center
+          const hardcodedRoute = [
+            { lat: 37.7749, lng: -122.4194 }, // SF General Hospital
+            { lat: 37.7755, lng: -122.4180 }, // Waypoint 1: Mission District
+            { lat: 37.7760, lng: -122.4165 }, // Waypoint 2: Mission Street
+            { lat: 37.7765, lng: -122.4150 }, // Waypoint 3: Howard Street
+            { lat: 37.7770, lng: -122.4135 }, // Waypoint 4: Near shelter
+            { lat: 37.7775, lng: -122.4120 }  // Harbor Light Center
+          ];
+          
+          baseData.pickup = {
+            name: "SF General Hospital",
+            coordinates: [hospitalLocation.lng, hospitalLocation.lat],
+            time: mockAgentData.transport.pickup_time
+          };
+          
+          baseData.dropoff = {
+            name: mockAgentData.shelter.name,
+            coordinates: [shelterLocation.lng, shelterLocation.lat],
+            eta: mockAgentData.transport.eta
+          };
+          
+          baseData.routes = [{
+            coordinates: hardcodedRoute.map(point => [point.lng, point.lat]),
+            distance: "2.1 miles",
+            duration: mockAgentData.transport.estimated_duration,
+            traffic: "light"
+          }];
+          
+          baseData.vehicle = {
+            driver: mockAgentData.transport.driver,
+            phone: mockAgentData.transport.phone,
+            vehicle_type: mockAgentData.transport.vehicle_type,
             license_plate: "CA 7ABC123"
           };
         }
@@ -277,6 +338,22 @@ const AgentMapBox: React.FC<AgentMapBoxProps> = ({
           </Marker>
         )}
 
+        {/* Moving car marker */}
+        {showRoute && mapData.routes?.[0] && (
+          <Marker
+            longitude={mapData.routes[0].coordinates[2][0]}
+            latitude={mapData.routes[0].coordinates[2][1]}
+          >
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="flex items-center justify-center w-10 h-10 rounded-full text-white shadow-lg bg-blue-600 animate-pulse"
+            >
+              <Truck className="w-5 h-5" />
+            </motion.div>
+          </Marker>
+        )}
+
         {/* Dropoff marker */}
         {mapData.dropoff && (
           <Marker
@@ -293,8 +370,8 @@ const AgentMapBox: React.FC<AgentMapBoxProps> = ({
           </Marker>
         )}
 
-        {/* Route lines */}
-        {mapData.routes?.map((route: any, index: number) => (
+        {/* Route lines - only show after coordination is complete */}
+        {showRoute && mapData.routes?.map((route: any, index: number) => (
           <Source
             key={index}
             id={`route-${index}`}

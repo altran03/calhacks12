@@ -1,0 +1,76 @@
+{
+  "case_id": "REAL_TEST_1761471073",
+  "patient": {
+    "contact_info": {
+      "name": "John Doe",
+      "phone1": "+14089167303",
+      "date_of_birth": "1980-01-01",
+      "address": "123 Main St",
+      "city": "San Francisco",
+      "state": "CA",
+      "zip": "94102"
+    },
+    "discharge_info": {
+      "discharging_facility": "San Francisco General Hospital",
+      "facility_address": "1001 Potrero Ave",
+      "facility_city": "San Francisco",
+      "facility_state": "CA",
+      "facility_zip": "94110",
+      "medical_record_number": "MR123456",
+      "date_of_admission": "2025-01-25",
+      "planned_discharge_date": "2025-01-26",
+      "discharged_to": "Shelter"
+    },
+    "follow_up": {
+      "appointment_date": "2025-01-28",
+      "appointment_time": "10:00 AM",
+      "provider": "Dr. Sarah Johnson",
+      "department": "Primary Care",
+      "location": "SFGH Outpatient Clinic",
+      "phone": "(415) 555-1234"
+    },
+    "lab_results": {
+      "blood_work": {
+        "hemoglobin": "12.5 g/dL",
+        "hematocrit": "38%",
+        "white_blood_cells": "7.2 K/uL",
+        "platelets": "250 K/uL"
+      },
+      "urine_analysis": {
+        "protein": "Negative",
+        "glucose": "Negative",
+        "blood": "Negative"
+      },
+      "drug_screen": {
+        "methadone": "Positive",
+        "opiates": "Negative",
+        "cocaine": "Negative"
+      }
+    },
+    "treatment_info": {
+      "therapy_initiated_date": "2025-01-25",
+      "therapy_interrupted": false,
+      "medications": {
+        "Methadone": {
+          "prescribed": true,
+          "dosage": "50mg",
+          "type": "daily"
+        }
+      },
+      "frequency": "daily",
+      "central_line_inserted": false,
+      "days_of_medication_supplied": "7",
+      "patient_agreed_to_dot": true,
+      "patient_agreed_to_dot_date": "2025-01-25",
+      "patient_agreed_to_dot_time": "14:30",
+      "patient_agreed_to_dot_witness": "Dr. Smith",
+      "patient_agreed_to_dot_witness_title": "Attending Physician"
+    }
+  },
+  "workflow": {
+    "timeline": []
+  },
+  "results": {
+    "error": "1 validation error for TransportRequest\nurgency\n  field required (type=value_error.missing)"
+  }
+}

@@ -1,0 +1,32 @@
+[
+  {
+    "id": "transport-001",
+    "name": "City Transit Authority",
+    "type": "public_transit",
+    "phone": "(415) 555-1000",
+    "availability": "24/7",
+    "cost": 2.50,
+    "accessibility": true,
+    "created_at": "2024-01-15T10:30:00"
+  },
+  {
+    "id": "transport-002",
+    "name": "Community Shuttle Service",
+    "type": "shuttle",
+    "phone": "(510) 555-2000",
+    "availability": "6:00 AM - 10:00 PM",
+    "cost": 1.00,
+    "accessibility": true,
+    "created_at": "2024-01-15T10:30:00"
+  },
+  {
+    "id": "transport-003",
+    "name": "Medical Transport Co.",
+    "type": "medical_transport",
+    "phone": "(415) 555-3000",
+    "availability": "24/7",
+    "cost": 0.00,
+    "accessibility": true,
+    "created_at": "2024-01-15T10:30:00"
+  }
+]

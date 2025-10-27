@@ -186,7 +186,7 @@ export default function Dashboard({ activeView, setActiveView }: DashboardProps)
                    {activeView === "intake" && <DischargeIntake onWorkflowStarted={() => setActiveView("timeline")} />}
                    {activeView === "timeline" && <WorkflowList />}
                    {activeView === "map" && <MapView />}
-                   {activeView === "report" && <FinalizedReport />}
+                   {activeView === "report" && <FinalizedReport caseId={localStorage.getItem('current_case_id') || "mock-case"} />}
                  </div>
         </motion.div>
       </AnimatePresence>

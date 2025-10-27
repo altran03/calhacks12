@@ -1,0 +1,280 @@
+{
+  "case_id": "LIVE_CONVERSATION_1761467309",
+  "total_interactions": 11,
+  "agents_involved": [
+    "resource_agent",
+    "social_worker_agent",
+    "coordinator_agent",
+    "system",
+    "pharmacy_agent",
+    "shelter_agent",
+    "transport_agent"
+  ],
+  "conversation_logs": [
+    {
+      "timestamp": "2025-10-26T01:28:29.160916",
+      "from_agent": "system",
+      "to_agent": "coordinator_agent",
+      "message_type": "DischargeRequest",
+      "content": {
+        "case_id": "LIVE_CONVERSATION_1761467309",
+        "patient_name": "John Doe",
+        "hospital": "San Francisco General Hospital",
+        "discharge_date": "2024-01-15T12:00:00Z",
+        "medical_condition": "Post-surgical recovery",
+        "accessibility_needs": "wheelchair_access"
+      },
+      "status": "initiated",
+      "case_id": "LIVE_CONVERSATION_1761467309"
+    },
+    {
+      "timestamp": "2025-10-26T01:28:30.163335",
+      "from_agent": "coordinator_agent",
+      "to_agent": "shelter_agent",
+      "message_type": "ShelterMatch",
+      "content": {
+        "case_id": "LIVE_CONVERSATION_1761467309",
+        "shelter_name": "Harbor Light Center",
+        "address": "1275 Howard St, San Francisco, CA 94103",
+        "available_beds": 12,
+        "accessibility": true,
+        "services": [
+          "medical_respite",
+          "wheelchair_access",
+          "case_management"
+        ],
+        "phone": "(415) 555-0000",
+        "patient_context": null
+      },
+      "status": "sent",
+      "case_id": "LIVE_CONVERSATION_1761467309"
+    },
+    {
+      "timestamp": "2025-10-26T01:28:32.165150",
+      "from_agent": "shelter_agent",
+      "to_agent": "coordinator_agent",
+      "message_type": "ShelterConfirmation",
+      "content": {
+        "case_id": "LIVE_CONVERSATION_1761467309",
+        "shelter_name": "Harbor Light Center",
+        "status": "confirmed",
+        "bed_reserved": true,
+        "accessibility_confirmed": true,
+        "conversation_logs": [
+          {
+            "action": "shelter_availability_check",
+            "message": "Checking shelter availability",
+            "timestamp": "2025-10-26T01:28:32.165133",
+            "status": "completed"
+          },
+          {
+            "action": "accessibility_verification",
+            "message": "Verifying accessibility requirements",
+            "timestamp": "2025-10-26T01:28:32.165145",
+            "status": "completed"
+          },
+          {
+            "action": "bed_reservation",
+            "message": "Reserving bed for patient",
+            "timestamp": "2025-10-26T01:28:32.165147",
+            "status": "completed"
+          }
+        ]
+      },
+      "status": "completed",
+      "case_id": "LIVE_CONVERSATION_1761467309"
+    },
+    {
+      "timestamp": "2025-10-26T01:28:33.166538",
+      "from_agent": "coordinator_agent",
+      "to_agent": "transport_agent",
+      "message_type": "TransportRequest",
+      "content": {
+        "case_id": "LIVE_CONVERSATION_1761467309",
+        "pickup_location": "San Francisco General Hospital",
+        "dropoff_location": "1275 Howard St, San Francisco, CA 94103",
+        "accessibility_required": true,
+        "urgency": "standard",
+        "patient_name": "John Doe",
+        "estimated_time": null
+      },
+      "status": "sent",
+      "case_id": "LIVE_CONVERSATION_1761467309"
+    },
+    {
+      "timestamp": "2025-10-26T01:28:35.168198",
+      "from_agent": "transport_agent",
+      "to_agent": "coordinator_agent",
+      "message_type": "TransportConfirmation",
+      "content": {
+        "case_id": "LIVE_CONVERSATION_1761467309",
+        "transport_provider": "Paratransit",
+        "pickup_time": "2024-01-15T14:00:00Z",
+        "driver_name": "John Smith",
+        "vehicle_type": "Wheelchair Accessible Van",
+        "conversation_logs": [
+          {
+            "action": "transport_provider_search",
+            "message": "Searching for accessible transport providers",
+            "timestamp": "2025-10-26T01:28:35.168130",
+            "status": "completed"
+          },
+          {
+            "action": "schedule_transport",
+            "message": "Scheduling transport pickup",
+            "timestamp": "2025-10-26T01:28:35.168180",
+            "status": "completed"
+          }
+        ]
+      },
+      "status": "completed",
+      "case_id": "LIVE_CONVERSATION_1761467309"
+    },
+    {
+      "timestamp": "2025-10-26T01:28:36.170383",
+      "from_agent": "coordinator_agent",
+      "to_agent": "social_worker_agent",
+      "message_type": "SocialWorkerAssignment",
+      "content": {
+        "case_id": "LIVE_CONVERSATION_1761467309",
+        "social_worker_name": "Jane Smith",
+        "contact_phone": "(415) 555-0001",
+        "department": "Social Services",
+        "specialization": null
+      },
+      "status": "sent",
+      "case_id": "LIVE_CONVERSATION_1761467309"
+    },
+    {
+      "timestamp": "2025-10-26T01:28:38.172428",
+      "from_agent": "social_worker_agent",
+      "to_agent": "coordinator_agent",
+      "message_type": "SocialWorkerConfirmation",
+      "content": {
+        "case_id": "LIVE_CONVERSATION_1761467309",
+        "social_worker_name": "Jane Smith",
+        "contact_phone": "(415) 555-0001",
+        "department": "Social Services",
+        "availability": "available",
+        "first_contact_date": "2024-01-15",
+        "case_priority": "high",
+        "conversation_logs": [
+          {
+            "action": "social_worker_assignment",
+            "message": "Assigning social worker to case",
+            "timestamp": "2025-10-26T01:28:38.172367",
+            "status": "completed"
+          },
+          {
+            "action": "case_priority_assessment",
+            "message": "Assessing case priority level",
+            "timestamp": "2025-10-26T01:28:38.172412",
+            "status": "completed"
+          }
+        ]
+      },
+      "status": "completed",
+      "case_id": "LIVE_CONVERSATION_1761467309"
+    },
+    {
+      "timestamp": "2025-10-26T01:28:39.174576",
+      "from_agent": "coordinator_agent",
+      "to_agent": "resource_agent",
+      "message_type": "ResourceRequest",
+      "content": {
+        "case_id": "LIVE_CONVERSATION_1761467309",
+        "patient_name": "John Doe",
+        "dietary_restrictions": null,
+        "allergies": null,
+        "needed_items": [
+          "food",
+          "hygiene_kit",
+          "clothing"
+        ],
+        "location": "1275 Howard St, San Francisco, CA 94103",
+        "urgency": "standard"
+      },
+      "status": "sent",
+      "case_id": "LIVE_CONVERSATION_1761467309"
+    },
+    {
+      "timestamp": "2025-10-26T01:28:41.176330",
+      "from_agent": "resource_agent",
+      "to_agent": "coordinator_agent",
+      "message_type": "ResourceConfirmation",
+      "content": {
+        "case_id": "LIVE_CONVERSATION_1761467309",
+        "resources_coordinated": [
+          "food",
+          "hygiene_kit",
+          "clothing"
+        ],
+        "delivery_scheduled": "2024-01-15T16:00:00Z",
+        "conversation_logs": [
+          {
+            "action": "resource_coordination",
+            "message": "Coordinating basic necessities",
+            "timestamp": "2025-10-26T01:28:41.176308",
+            "status": "completed"
+          }
+        ]
+      },
+      "status": "completed",
+      "case_id": "LIVE_CONVERSATION_1761467309"
+    },
+    {
+      "timestamp": "2025-10-26T01:28:42.178349",
+      "from_agent": "coordinator_agent",
+      "to_agent": "pharmacy_agent",
+      "message_type": "PharmacyRequest",
+      "content": {
+        "case_id": "LIVE_CONVERSATION_1761467309",
+        "patient_name": "John Doe",
+        "medications": [
+          {
+            "name": "Lisinopril",
+            "dosage": "10mg"
+          },
+          {
+            "name": "Metformin",
+            "dosage": "500mg"
+          }
+        ],
+        "insurance_info": "Medi-Cal",
+        "location": "1275 Howard St, San Francisco, CA 94103",
+        "urgency": "standard"
+      },
+      "status": "sent",
+      "case_id": "LIVE_CONVERSATION_1761467309"
+    },
+    {
+      "timestamp": "2025-10-26T01:28:44.180208",
+      "from_agent": "pharmacy_agent",
+      "to_agent": "coordinator_agent",
+      "message_type": "PharmacyMatch",
+      "content": {
+        "case_id": "LIVE_CONVERSATION_1761467309",
+        "pharmacy_name": "CVS Pharmacy 24hr",
+        "medications_available": true,
+        "pickup_time": "2024-01-15T18:00:00Z",
+        "conversation_logs": [
+          {
+            "action": "pharmacy_search",
+            "message": "Searching for 24-hour pharmacy",
+            "timestamp": "2025-10-26T01:28:44.180150",
+            "status": "completed"
+          },
+          {
+            "action": "medication_verification",
+            "message": "Verifying medication availability",
+            "timestamp": "2025-10-26T01:28:44.180195",
+            "status": "completed"
+          }
+        ]
+      },
+      "status": "completed",
+      "case_id": "LIVE_CONVERSATION_1761467309"
+    }
+  ],
+  "timestamp": "2025-10-26T01:28:45.187430"
+}

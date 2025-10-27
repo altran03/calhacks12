@@ -20,7 +20,7 @@ class VapiIntegration:
         }
         # Demo mode configuration
         self.demo_mode = demo_mode if demo_mode is not None else os.getenv("DEMO_MODE", "True").lower() == "true"
-        self.demo_phone = demo_phone or os.getenv("DEMO_PHONE_NUMBER", "+11234567890")
+        self.demo_phone = demo_phone or os.getenv("DEMO_PHONE_NUMBER", "+14089167303")
 
     def make_shelter_availability_call(self, shelter_phone: str, shelter_name: str) -> Dict[str, Any]:
         """Make a voice call to check shelter availability

@@ -1,0 +1,37 @@
+{
+  "case_id": "MAIN_WORKFLOW_TEST_1761469765",
+  "patient": {
+    "contact_info": "<__main__.ContactInfo object at 0x100bfea50>",
+    "discharge_info": "<__main__.DischargeInfo object at 0x100bfeba0>"
+  },
+  "workflow": {
+    "case_id": "MAIN_WORKFLOW_TEST_1761469765",
+    "patient": "<__main__.MockPatientInfo object at 0x100c49450>",
+    "status": "initiated",
+    "current_step": "agent_coordination",
+    "timeline": [
+      {
+        "step": "vapi_transcription",
+        "status": "completed",
+        "description": "\ud83c\udfa4 Vapi Call Transcription: AI: Hello. This is CareLink. Calling from San Francisco General Hospital. We have a homeless patient being discharged tonight and need to check if you have available beds and can accommodate them. You have a moment to discuss?\n",
+        "agent": "shelter_agent",
+        "timestamp": "2025-10-26T02:10:12.629608",
+        "transcription": "AI: Hello. This is CareLink. Calling from San Francisco General Hospital. We have a homeless patient being discharged tonight and need to check if you have available beds and can accommodate them. You have a moment to discuss?\n",
+        "type": "vapi_transcription"
+      }
+    ],
+    "created_at": "2025-10-26T02:09:25.067789",
+    "updated_at": "2025-10-26T02:09:25.067793"
+  },
+  "timeline": [
+    {
+      "step": "vapi_transcription",
+      "status": "completed",
+      "description": "\ud83c\udfa4 Vapi Call Transcription: AI: Hello. This is CareLink. Calling from San Francisco General Hospital. We have a homeless patient being discharged tonight and need to check if you have available beds and can accommodate them. You have a moment to discuss?\n",
+      "agent": "shelter_agent",
+      "timestamp": "2025-10-26T02:10:12.629608",
+      "transcription": "AI: Hello. This is CareLink. Calling from San Francisco General Hospital. We have a homeless patient being discharged tonight and need to check if you have available beds and can accommodate them. You have a moment to discuss?\n",
+      "type": "vapi_transcription"
+    }
+  ]
+}

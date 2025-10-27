@@ -1,0 +1,22 @@
+[
+  {
+    "id": "e0879a2b-9fcc-4c63-aae1-11e82dc6e751",
+    "case_id": "TEST-CASE-001",
+    "status": "in_progress",
+    "current_step": "shelter_assignment",
+    "progress": 50,
+    "shelter_id": "shelter-001",
+    "transport_id": "transport-001",
+    "social_worker_id": "sw-001",
+    "workflow_data": {
+      "status": "in_progress",
+      "current_step": "shelter_assignment",
+      "progress": 50,
+      "shelter_id": "shelter-001",
+      "transport_id": "transport-001",
+      "social_worker_id": "sw-001"
+    },
+    "created_at": "2025-10-26T04:29:57.014368",
+    "updated_at": "2025-10-26T04:29:57.014376"
+  }
+]

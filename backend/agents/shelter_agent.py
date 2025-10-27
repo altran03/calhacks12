@@ -166,17 +166,16 @@ async def handle_availability_request(ctx: Context, sender: str, msg: ShelterAva
         ctx.logger.error(f"Error checking availability for {msg.shelter_name}: {e}")
 
 async def verify_shelter_availability_via_vapi(shelter_match: ShelterMatch) -> bool:
-<<<<<<< HEAD
     """Verify shelter availability via Vapi voice call"""
     try:
         # Import Vapi integration
         import os
         from vapi_integration_demo import VapiIntegration
         
-        # Initialize Vapi integration (no Twilio needed - Vapi provides the number)
+        # Initialize Vapi integration with your environment variables
         vapi = VapiIntegration(
             api_key=os.getenv("VAPI_API_KEY"),
-            demo_phone=os.getenv("DEMO_PHONE_NUMBER"),
+            demo_phone=os.getenv("DEMO_PHONE_NUMBER") or os.getenv("TEST_PHONE_NUMBER"),
             demo_mode=True  # Use demo mode to call your number
         )
         
@@ -186,16 +185,23 @@ async def verify_shelter_availability_via_vapi(shelter_match: ShelterMatch) -> b
         print(f"🔑 Vapi API Key: {os.getenv('VAPI_API_KEY', 'NOT_SET')[:10]}...")
         print(f"📞 Demo Phone: {os.getenv('DEMO_PHONE_NUMBER', 'NOT_SET')}")
         
-        # Make actual Vapi call
+        # Make actual Vapi call - ALWAYS call your demo number
+        demo_phone = os.getenv("DEMO_PHONE_NUMBER") or os.getenv("TEST_PHONE_NUMBER")
+        if not demo_phone:
+            print("❌ No demo phone number configured!")
+            return {"error": "No demo phone number configured", "call_successful": False}
+            
+        print(f"📞 OVERRIDING shelter phone to call YOUR number: {demo_phone}")
         result = vapi.make_shelter_availability_call(
-            shelter_phone=getattr(shelter_match, 'phone', '(415) 555-0000'),
+            shelter_phone=demo_phone,  # Always call your demo number
             shelter_name=shelter_match.shelter_name
         )
         
         print(f"📊 Vapi call result: {result}")
         
-        if result.get("error"):
-            print(f"❌ Vapi call failed: {result['error']}")
+        # Check if the call was successful
+        if not result.get("call_successful", False):
+            print(f"❌ Vapi call failed: {result.get('error', 'Unknown error')}")
             # Check if it's a daily limit error
             if "Daily Outbound Call Limit" in str(result.get("error", "")):
                 print("📞 Daily limit reached - simulating call for demo purposes")
@@ -211,19 +217,24 @@ async def verify_shelter_availability_via_vapi(shelter_match: ShelterMatch) -> b
                 }
             return {"error": result.get("error", "Unknown Vapi error"), "call_successful": False}
             
-        print(f"✅ Vapi call initiated successfully")
+        print(f"✅ Vapi call completed successfully")
         print(f"📊 Call ID: {result.get('id', 'unknown')}")
         print(f"📞 Status: {result.get('status', 'unknown')}")
         
-        # In demo mode, we'll simulate the call result
-        # In production, this would wait for the webhook response
+        # Get the transcription from the Vapi result (already processed by VapiIntegration)
+        transcription = result.get("transcript", "") or result.get("transcription", "") or result.get("full_transcript", "")
+        print(f"📝 Raw transcription: {transcription}")
+        
+        # Process transcription to extract essential information
+        processed_info = process_shelter_transcription(transcription, shelter_match.shelter_name)
+        
         return {
             "call_successful": True,
-            "transcription": "Real Vapi call: Shelter confirmed availability and services",
-            "availability_confirmed": True,
-            "beds_available": 8,
-            "accessibility": True,
-            "services": ["meals", "showers", "counseling"],
+            "transcription": transcription,
+            "availability_confirmed": processed_info["availability_confirmed"],
+            "beds_available": processed_info["beds_available"],
+            "accessibility": processed_info["accessibility"],
+            "services": processed_info["services"],
             "demo_mode": False
         }
         
@@ -240,6 +251,100 @@ async def verify_shelter_availability_via_vapi(shelter_match: ShelterMatch) -> b
             "demo_mode": True,
             "error_fallback": True
         }
+
+def process_shelter_transcription(transcription: str, shelter_name: str) -> dict:
+    """Process Vapi transcription to extract essential shelter information"""
+    print(f"🧠 Processing transcription for {shelter_name}: {transcription[:100]}...")
+    
+    # Initialize default values
+    availability_confirmed = False
+    beds_available = 0
+    accessibility = False
+    services = []
+    
+    if not transcription or transcription.lower() in ["no transcription available", "no transcription captured"]:
+        print("⚠️ No transcription available - using default values")
+        return {
+            "availability_confirmed": True,  # Assume available for demo
+            "beds_available": 8,
+            "accessibility": True,
+            "services": ["meals", "showers", "counseling"]
+        }
+    
+    transcription_lower = transcription.lower()
+    
+    # Extract bed availability
+    import re
+    bed_patterns = [
+        r'(\d+)\s*beds?\s*available',
+        r'(\d+)\s*spots?\s*available',
+        r'(\d+)\s*openings?',
+        r'we have (\d+)',
+        r'(\d+)\s*tonight'
+    ]
+    
+    for pattern in bed_patterns:
+        match = re.search(pattern, transcription_lower)
+        if match:
+            beds_available = int(match.group(1))
+            availability_confirmed = True
+            print(f"📊 Found {beds_available} beds available")
+            break
+    
+    # If no specific number found, check for general availability
+    if not availability_confirmed:
+        availability_keywords = [
+            "available", "yes", "we can", "we have", "sure", "of course",
+            "definitely", "absolutely", "we do have"
+        ]
+        for keyword in availability_keywords:
+            if keyword in transcription_lower:
+                availability_confirmed = True
+                beds_available = 5  # Default assumption
+                print(f"📊 General availability confirmed")
+                break
+    
+    # Extract accessibility information
+    accessibility_keywords = [
+        "wheelchair", "accessible", "ada", "disability", "handicap",
+        "ramp", "elevator", "accessible entrance"
+    ]
+    for keyword in accessibility_keywords:
+        if keyword in transcription_lower:
+            accessibility = True
+            print(f"♿ Accessibility confirmed: {keyword}")
+            break
+    
+    # Extract services
+    service_keywords = {
+        "meals": ["meal", "food", "dinner", "breakfast", "lunch"],
+        "showers": ["shower", "bath", "hygiene", "clean"],
+        "counseling": ["counseling", "therapy", "mental health", "support"],
+        "medical": ["medical", "health", "nurse", "doctor", "medication"],
+        "case_management": ["case management", "social worker", "coordinator"]
+    }
+    
+    for service, keywords in service_keywords.items():
+        for keyword in keywords:
+            if keyword in transcription_lower:
+                services.append(service)
+                print(f"🔧 Service confirmed: {service}")
+                break
+    
+    # If no services found, add defaults
+    if not services:
+        services = ["meals", "showers", "counseling"]
+        print("🔧 Using default services")
+    
+    result = {
+        "availability_confirmed": availability_confirmed,
+        "beds_available": beds_available,
+        "accessibility": accessibility,
+        "services": services
+    }
+    
+    print(f"📋 Processed information: {result}")
+    return result
 
 async def reserve_shelter_bed(shelter_match: ShelterMatch) -> bool:
     """Reserve a bed at the shelter"""
@@ -460,9 +565,18 @@ async def handle_shelter_matching_internal(shelter_match: ShelterMatch) -> dict:
             message = f"Vapi call failed: {vapi_result['error']}"
         else:
             print(f"✅ Vapi call successful: {vapi_result}")
-            availability_confirmed = True
-            bed_reserved = True
-            message = "Shelter availability confirmed via Vapi call"
+            # Extract information from transcription
+            transcription = vapi_result.get("transcription", "") if isinstance(vapi_result, dict) else ""
+            
+            # Parse transcription to determine availability
+            if "available" in transcription.lower() or "beds" in transcription.lower():
+                availability_confirmed = True
+                bed_reserved = True
+                message = f"Shelter availability confirmed via Vapi call. Transcription: {transcription[:100]}..."
+            else:
+                availability_confirmed = False
+                bed_reserved = False
+                message = f"Shelter not available. Transcription: {transcription[:100]}..."
         
         # Log the final result
         result_log = {
@@ -504,6 +618,58 @@ async def handle_shelter_matching_internal(shelter_match: ShelterMatch) -> dict:
             "error": str(e),
             "conversation_logs": [error_log]
         }
+
+async def get_real_shelter_coordinates(shelter_name: str) -> List[float]:
+    """Get real coordinates for a shelter from Supabase or geocode address"""
+    try:
+        # This would query Supabase for shelter coordinates
+        # For now, return default SF coordinates
+        return [37.7749, -122.4194]
+    except Exception as e:
+        print(f"❌ Error getting shelter coordinates: {e}")
+        return [37.7749, -122.4194]  # Default SF coordinates
+
+def geocode_address(address: str) -> List[float]:
+    """Geocode an address to get coordinates"""
+    try:
+        # This would use a geocoding service
+        # For now, return default SF coordinates
+        return [37.7749, -122.4194]
+    except Exception as e:
+        print(f"❌ Error geocoding address: {e}")
+        return [37.7749, -122.4194]  # Default SF coordinates
+
+async def find_alternative_shelters(patient_needs: dict) -> List[dict]:
+    """Find alternative shelters if the primary one is not available"""
+    try:
+        # This would query Supabase for alternative shelters
+        # For now, return a mock alternative
+        return [{
+            "name": "Alternative Shelter",
+            "address": "456 Alternative St",
+            "phone": "(415) 555-0001",
+            "capacity": 20,
+            "accessibility": True,
+            "services": ["meals", "showers", "counseling"]
+        }]
+    except Exception as e:
+        print(f"❌ Error finding alternative shelters: {e}")
+        return []
+
+async def check_shelter_availability(shelter_name: str) -> dict:
+    """Check shelter availability without making a call"""
+    try:
+        # This would check a database or API for availability
+        # For now, return mock availability
+        return {
+            "available": True,
+            "beds": 8,
+            "accessibility": True,
+            "services": ["meals", "showers", "counseling"]
+        }
+    except Exception as e:
+        print(f"❌ Error checking shelter availability: {e}")
+        return {"available": False, "beds": 0, "accessibility": False, "services": []}
 
 # Health check endpoint
 @shelter_agent.on_rest_get("/health", HealthResponse)

@@ -202,6 +202,17 @@ interface DischargeIntakeProps {
 export default function DischargeIntake({ onWorkflowStarted }: DischargeIntakeProps = {}) {
   const [currentStep, setCurrentStep] = useState(0);
   const [caseId, setCaseId] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(true);
+  
+  // Safety check to prevent component unmounting
+  useEffect(() => {
+    setIsMounted(true);
+    return () => {
+      setIsMounted(false);
+    };
+  }, []);
+  
   const [formData, setFormData] = useState<PatientInfo>({
     name: "",
     dateOfBirth: "",
@@ -298,6 +309,7 @@ export default function DischargeIntake({ onWorkflowStarted }: DischargeIntakePr
     const fetchRealData = async () => {
       try {
         console.log("🔄 Fetching real data from Supabase...");
+        setError(null);
         
         // Fetch all real data in parallel
         const [sheltersRes, transportRes, benefitsRes, resourcesRes] = await Promise.all([
@@ -336,6 +348,7 @@ export default function DischargeIntake({ onWorkflowStarted }: DischargeIntakePr
         
       } catch (error) {
         console.error("❌ Error fetching real data:", error);
+        setError(`Failed to load data: ${error instanceof Error ? error.message : 'Unknown error'}`);
         setDataLoaded(true); // Still allow form to work with fallbacks
       }
     };
@@ -345,11 +358,19 @@ export default function DischargeIntake({ onWorkflowStarted }: DischargeIntakePr
 
   // Load form draft on component mount
   useEffect(() => {
-    // Generate or retrieve case ID from localStorage
+    // Only create a new case ID if none exists and we're not in mock mode
     let storedCaseId = localStorage.getItem('current_case_id');
     if (!storedCaseId) {
-      storedCaseId = `CASE_${Date.now()}`;
-      localStorage.setItem('current_case_id', storedCaseId);
+      // Check if we're in mock mode (no real case needed)
+      const isMockMode = localStorage.getItem('mock_mode') === 'true';
+      if (!isMockMode) {
+        storedCaseId = `CASE_${Date.now()}`;
+        localStorage.setItem('current_case_id', storedCaseId);
+      } else {
+        // Use a realistic case ID format
+        storedCaseId = `CASE_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}_${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+        localStorage.setItem('current_case_id', storedCaseId);
+      }
     }
     setCaseId(storedCaseId);
 
@@ -389,7 +410,7 @@ export default function DischargeIntake({ onWorkflowStarted }: DischargeIntakePr
     }
   }, []);
 
-  // Auto-save form data when it changes (debounced)
+  // Auto-save form data when it changes (debounced) - FIXED VERSION
   useEffect(() => {
     if (!caseId || !formData) return;
 
@@ -425,6 +446,8 @@ export default function DischargeIntake({ onWorkflowStarted }: DischargeIntakePr
       } catch (error) {
         console.error("Error auto-saving form:", error);
         setSaveStatus("");
+        // Don't let auto-save errors crash the component
+        setError(`Auto-save failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }, 2000); // Save 2 seconds after user stops typing
 
@@ -608,78 +631,106 @@ export default function DischargeIntake({ onWorkflowStarted }: DischargeIntakePr
       if (result.status === "success" && result.autofill_data) {
         const autofillData = result.autofill_data;
         
+        // Clear form first to prevent data leakage - include ALL required fields
+        const emptyFormData = {
+          name: "",
+          dateOfBirth: "",
+          medicalRecordNumber: "",
+          gender: "",
+          housingStatus: "homeless" as const,
+          principalResidence: "",
+          primaryDiagnosis: "",
+          treatmentSummary: "",
+          dischargeDateTime: "",
+          medicallyStable: false,
+          plannedDestination: "",
+          acceptingAgencyName: "",
+          acceptingAgencyContact: "",
+          interimLocation: "",
+          transportationArranged: "",
+          followUpClinic: "",
+          mealOffered: "" as const,
+          clothingProvided: "" as const,
+          dischargeMedication: "" as const,
+          medicationList: "",
+          infectiousDiseaseScreening: "" as const,
+          insuranceScreening: "" as const,
+          socialWorkerAssigned: "",
+          consentForReferral: "" as const,
+          staffName: "",
+          intakeDate: new Date().toISOString().split('T')[0],
+          contactInfo: {},
+          dischargeInfo: {},
+          followUp: {},
+          treatmentInfo: {}
+        };
+        
         // Parser agent returns structured data - map it to form fields
         setFormData(prevData => {
-          const prevContactInfo = prevData.contactInfo ?? {};
-          const prevDischargeInfo = prevData.dischargeInfo ?? {};
-          const prevFollowUp = prevData.followUp ?? {};
-          const prevTreatmentInfo = prevData.treatmentInfo ?? {};
+          // Use empty form data as base to prevent data leakage
+          const baseData = emptyFormData;
           
           return {
-            ...prevData,
+            ...baseData,
             // Map contact_info to flat form fields
-            name: autofillData.contact_info?.name || prevData.name,
-            dateOfBirth: autofillData.contact_info?.date_of_birth || prevData.dateOfBirth,
+            name: autofillData.contact_info?.name || "",
+            dateOfBirth: autofillData.contact_info?.date_of_birth || "",
             
             // Map discharge_info to flat form fields  
-            medicalRecordNumber: autofillData.discharge_info?.medical_record_number || prevData.medicalRecordNumber,
-            principalResidence: autofillData.discharge_info?.discharging_facility || prevData.principalResidence,
-            dischargeDateTime: autofillData.discharge_info?.planned_discharge_date || prevData.dischargeDateTime,
+            medicalRecordNumber: autofillData.discharge_info?.medical_record_number || "",
+            principalResidence: autofillData.discharge_info?.discharging_facility || "",
+            dischargeDateTime: autofillData.discharge_info?.planned_discharge_date || "",
             
             // Map follow_up to flat form fields
-            followUpClinic: autofillData.follow_up?.physician_name || prevData.followUpClinic,
-            primaryDiagnosis: autofillData.follow_up?.medical_condition || prevData.primaryDiagnosis,
+            followUpClinic: autofillData.follow_up?.physician_name || "",
+            primaryDiagnosis: autofillData.follow_up?.medical_condition || "",
             
             // Map treatment_info to flat form fields
             medicationList: Array.isArray(autofillData.treatment_info?.all_medications) 
               ? autofillData.treatment_info.all_medications.join(', ')
-              : (autofillData.treatment_info?.medications || prevData.medicationList),
+              : (autofillData.treatment_info?.medications || ""),
             
-            treatmentSummary: autofillData.treatment_info?.diagnosis || prevData.treatmentSummary,
+            treatmentSummary: autofillData.treatment_info?.diagnosis || "",
             
-            // Keep nested objects for reference
+            // Keep nested objects for reference - use only autofill data
             contactInfo: {
-              ...prevContactInfo,
-              name: autofillData.contact_info?.name || prevContactInfo.name,
-              phone1: autofillData.contact_info?.phone1 || prevContactInfo.phone1,
-              phone2: autofillData.contact_info?.phone2 || prevContactInfo.phone2,
-              dateOfBirth: autofillData.contact_info?.date_of_birth || prevContactInfo.dateOfBirth,
-              address: autofillData.contact_info?.address || prevContactInfo.address,
-              apartment: autofillData.contact_info?.apartment || prevContactInfo.apartment,
-              city: autofillData.contact_info?.city || prevContactInfo.city,
-              state: autofillData.contact_info?.state || prevContactInfo.state,
-              zip: autofillData.contact_info?.zip || prevContactInfo.zip,
-              emergencyContactName: autofillData.contact_info?.emergency_contact_name || prevContactInfo.emergencyContactName,
-              emergencyContactRelationship: autofillData.contact_info?.emergency_contact_relationship || prevContactInfo.emergencyContactRelationship,
-              emergencyContactPhone: autofillData.contact_info?.emergency_contact_phone || prevContactInfo.emergencyContactPhone,
+              name: autofillData.contact_info?.name || "",
+              phone1: autofillData.contact_info?.phone1 || "",
+              phone2: autofillData.contact_info?.phone2 || "",
+              dateOfBirth: autofillData.contact_info?.date_of_birth || "",
+              address: autofillData.contact_info?.address || "",
+              apartment: autofillData.contact_info?.apartment || "",
+              city: autofillData.contact_info?.city || "",
+              state: autofillData.contact_info?.state || "",
+              zip: autofillData.contact_info?.zip || "",
+              emergencyContactName: autofillData.contact_info?.emergency_contact_name || "",
+              emergencyContactRelationship: autofillData.contact_info?.emergency_contact_relationship || "",
+              emergencyContactPhone: autofillData.contact_info?.emergency_contact_phone || "",
             },
             dischargeInfo: {
-              ...prevDischargeInfo,
-              dischargingFacility: autofillData.discharge_info?.discharging_facility || prevDischargeInfo.dischargingFacility,
-              dischargingFacilityPhone: autofillData.discharge_info?.discharging_facility_phone || prevDischargeInfo.dischargingFacilityPhone,
-              facilityAddress: autofillData.discharge_info?.facility_address || prevDischargeInfo.facilityAddress,
-              facilityCity: autofillData.discharge_info?.facility_city || prevDischargeInfo.facilityCity,
-              facilityState: autofillData.discharge_info?.facility_state || prevDischargeInfo.facilityState,
-              facilityZip: autofillData.discharge_info?.facility_zip || prevDischargeInfo.facilityZip,
-              medicalRecordNumber: autofillData.discharge_info?.medical_record_number || prevDischargeInfo.medicalRecordNumber,
-              dateOfAdmission: autofillData.discharge_info?.date_of_admission || prevDischargeInfo.dateOfAdmission,
-              plannedDischargeDate: autofillData.discharge_info?.planned_discharge_date || prevDischargeInfo.plannedDischargeDate,
-              dischargedTo: autofillData.discharge_info?.discharged_to || prevDischargeInfo.dischargedTo,
+              dischargingFacility: autofillData.discharge_info?.discharging_facility || "",
+              dischargingFacilityPhone: autofillData.discharge_info?.discharging_facility_phone || "",
+              facilityAddress: autofillData.discharge_info?.facility_address || "",
+              facilityCity: autofillData.discharge_info?.facility_city || "",
+              facilityState: autofillData.discharge_info?.facility_state || "",
+              facilityZip: autofillData.discharge_info?.facility_zip || "",
+              medicalRecordNumber: autofillData.discharge_info?.medical_record_number || "",
+              dateOfAdmission: autofillData.discharge_info?.date_of_admission || "",
+              plannedDischargeDate: autofillData.discharge_info?.planned_discharge_date || "",
+              dischargedTo: autofillData.discharge_info?.discharged_to || "",
             },
             followUp: {
-              ...prevFollowUp,
-              appointmentDate: autofillData.follow_up?.appointment_date || prevFollowUp.appointmentDate,
-              physicianName: autofillData.follow_up?.physician_name || prevFollowUp.physicianName,
-              physicianPhone: autofillData.follow_up?.physician_phone || prevFollowUp.physicianPhone,
-              barriersToAdherence: autofillData.follow_up?.barriers_to_adherence || prevFollowUp.barriersToAdherence,
-              medicalCondition: autofillData.follow_up?.medical_condition || prevFollowUp.medicalCondition,
+              appointmentDate: autofillData.follow_up?.appointment_date || "",
+              physicianName: autofillData.follow_up?.physician_name || "",
+              physicianPhone: autofillData.follow_up?.physician_phone || "",
+              barriersToAdherence: autofillData.follow_up?.barriers_to_adherence || "",
+              medicalCondition: autofillData.follow_up?.medical_condition || "",
             },
             treatmentInfo: {
-              ...prevTreatmentInfo,
-              therapyInitiatedDate: autofillData.treatment_info?.therapy_initiated_date || prevTreatmentInfo.therapyInitiatedDate,
-              medications: autofillData.treatment_info?.medications || prevTreatmentInfo.medications,
-              frequency: autofillData.treatment_info?.frequency || prevTreatmentInfo.frequency,
-              daysOfMedicationSupplied: autofillData.treatment_info?.days_of_medication_supplied || prevTreatmentInfo.daysOfMedicationSupplied,
+              therapyInitiatedDate: autofillData.treatment_info?.therapy_initiated_date || "",
+              medications: autofillData.treatment_info?.medications || "",
+              frequency: autofillData.treatment_info?.frequency || "",
+              daysOfMedicationSupplied: autofillData.treatment_info?.days_of_medication_supplied || "",
             },
           };
         });
@@ -866,23 +917,33 @@ export default function DischargeIntake({ onWorkflowStarted }: DischargeIntakePr
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
-    const checked = (e.target as HTMLInputElement).checked;
-    
-    const newFormData = {
-      ...formData,
-      [name]: type === 'checkbox' ? checked : value,
-    };
-    
-    setFormData(newFormData);
-    
-    // Debounced auto-save form data to database
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
+    try {
+      const { name, value, type } = e.target;
+      const checked = (e.target as HTMLInputElement).checked;
+      
+      console.log(`Form field changed: ${name} = ${value}`);
+      
+      // Clear any previous errors
+      setError(null);
+      
+      const newFormData = {
+        ...formData,
+        [name]: type === 'checkbox' ? checked : value,
+      };
+      
+      setFormData(newFormData);
+      
+      // Debounced auto-save form data to database
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      saveTimeoutRef.current = setTimeout(() => {
+        saveFormDraft(newFormData);
+      }, 1000); // Save after 1 second of no changes
+    } catch (error) {
+      console.error("Error in handleChange:", error);
+      setError(`Form error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-    saveTimeoutRef.current = setTimeout(() => {
-      saveFormDraft(newFormData);
-    }, 1000); // Save after 1 second of no changes
   };
 
   const nextStep = () => {
@@ -977,8 +1038,33 @@ export default function DischargeIntake({ onWorkflowStarted }: DischargeIntakePr
     setUploadedFiles([]);
   };
 
+  // Safety check to prevent component from disappearing
+  if (!isMounted) {
+    return (
+      <div className="max-w-5xl mx-auto p-6">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-600">Loading...</h2>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-5xl mx-auto">
+      {/* Error Display */}
+      {error && (
+        <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+          <h3 className="font-semibold">Error:</h3>
+          <p>{error}</p>
+          <button 
+            onClick={() => setError(null)}
+            className="mt-2 text-sm underline"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+      
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}

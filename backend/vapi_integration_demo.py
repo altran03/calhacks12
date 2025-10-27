@@ -20,7 +20,7 @@ class VapiIntegration:
             "Content-Type": "application/json"
         }
         # Use demo phone for testing (calls your number instead of real shelter numbers)
-        self.demo_phone = demo_phone or os.getenv("DEMO_PHONE_NUMBER")
+        self.demo_phone = demo_phone or os.getenv("DEMO_PHONE_NUMBER") or os.getenv("TEST_PHONE_NUMBER")
         self.demo_mode = demo_mode
 
     def get_phone_numbers(self) -> Dict[str, Any]:
@@ -64,25 +64,21 @@ class VapiIntegration:
         print(f"📞 Making REAL Vapi call to: {phone_to_call}")
         print(f"🏠 Shelter: {shelter_name}")
         
-        # Use Vapi's native calling (no Twilio needed - Vapi provides the number)
+        # Use Vapi's basic calling - the issue might be that we need a pre-configured assistant
+        phone_number_id = os.getenv("VAPI_PHONE_NUMBER_ID", "b07a03cd-a423-480c-b47a-41b40420d8e9")
+        
+        # Use pre-configured assistant from Vapi dashboard
+        assistant_id = os.getenv("VAPI_ASSISTANT_ID")
+        if not assistant_id:
+            raise ValueError("VAPI_ASSISTANT_ID environment variable is required for pre-configured assistant")
+        
         conversation = {
-            "phoneNumberId": "b07a03cd-a423-480c-b47a-41b40420d8e9",  # Your actual Vapi phone number ID
+            "phoneNumberId": phone_number_id,  # Use your Vapi phone number ID from environment
             "customer": {
                 "number": phone_to_call
             },
-            "assistant": {
-                "name": "CareLink Assistant",
-                "model": {
-                    "provider": "google",
-                    "model": "gemini-1.5-pro"
-                },
-                "voice": {
-                    "provider": "vapi",
-                    "voiceId": "Lily"
-                },
-                "firstMessage": f"Hello, this is CareLink calling to check bed availability at {shelter_name} for tonight. Do you have a moment to provide current availability?"
-            },
-            "maxDurationSeconds": 300,
+            "assistantId": assistant_id,  # Use pre-configured assistant from dashboard
+            "maxDurationSeconds": 600,  # 10 minutes to allow full conversation
             "name": "Shelter Check"  # Shorter name (max 40 chars)
         }
 
@@ -110,28 +106,159 @@ class VapiIntegration:
                 print(f"📞 Customer: {result.get('customer', {}).get('number', 'Unknown')}")
                 print(f"📞 Monitor URL: {result.get('monitor', {}).get('listenUrl', 'No monitor URL')}")
             
+            # Start real-time transcription monitoring
+            call_id = result.get('id', 'Unknown')
+            print(f"\n🎙️ STARTING REAL-TIME TRANSCRIPTION MONITORING...")
+            print("=" * 60)
+            
+            # Monitor call status and transcription in real-time
+            transcription_result = self.monitor_call_realtime(call_id)
+            
             # Extract transcription from result if available
-            transcription = "No transcription available"
-            if "transcript" in result:
-                transcription = result["transcript"]
-            elif "transcription" in result:
-                transcription = result["transcription"]
-            elif "messages" in result:
-                # Extract from messages array
-                messages = result.get("messages", [])
-                if messages:
-                    transcription = " ".join([msg.get("content", "") for msg in messages if msg.get("content")])
+            transcription = transcription_result.get('transcription', 'No transcription available')
             
             # Return result with transcription
             return {
                 **result,
                 "transcription": transcription,
-                "call_successful": True
+                "call_successful": True,
+                "full_transcript": transcription_result.get('full_transcript', ''),
+                "conversation_log": transcription_result.get('conversation_log', [])
             }
             
         except requests.exceptions.RequestException as e:
             print(f"❌ Error making Vapi call: {e}")
             return {"error": str(e), "call_successful": False}
+
+    def monitor_call_realtime(self, call_id: str) -> Dict[str, Any]:
+        """Monitor call status and transcription in real-time"""
+        import time
+        import json
+        
+        print(f"🎙️ Monitoring call {call_id} for real-time transcription...")
+        
+        conversation_log = []
+        full_transcript = ""
+        last_status = None
+        start_time = time.time()
+        max_wait_time = 600  # 10 minutes max
+        
+        failed_calls = set()  # Track failed call IDs to avoid repeated errors
+        
+        while time.time() - start_time < max_wait_time:
+            try:
+                # Skip if we already know this call ID fails
+                if call_id in failed_calls:
+                    time.sleep(5)
+                    continue
+                    
+                # Get call details
+                call_details = self.get_call_details(call_id)
+                if not call_details or call_details.get('error'):
+                    if call_details and call_details.get('error'):
+                        failed_calls.add(call_id)
+                    time.sleep(5)
+                    continue
+                
+                current_status = call_details.get('status', 'unknown')
+                
+                # Print status changes
+                if current_status != last_status:
+                    print(f"📞 Call Status: {current_status.upper()}")
+                    last_status = current_status
+                
+                # Check for transcription updates
+                if 'transcript' in call_details and call_details['transcript']:
+                    transcript = call_details['transcript']
+                    if transcript != full_transcript:
+                        new_content = transcript[len(full_transcript):]
+                        if new_content.strip():
+                            print(f"🎙️ NEW TRANSCRIPTION: {new_content}")
+                            conversation_log.append({
+                                'timestamp': time.time(),
+                                'content': new_content,
+                                'type': 'transcript'
+                            })
+                        full_transcript = transcript
+                
+                # Check for messages/utterances
+                if 'messages' in call_details:
+                    messages = call_details.get('messages', [])
+                    for message in messages:
+                        if message.get('content') and message.get('content') not in [log.get('content') for log in conversation_log]:
+                            role = message.get('role', 'unknown')
+                            content = message.get('content', '')
+                            print(f"💬 {role.upper()}: {content}")
+                            conversation_log.append({
+                                'timestamp': time.time(),
+                                'content': f"{role.upper()}: {content}",
+                                'type': 'message',
+                                'role': role
+                            })
+                
+                # Check if call is ended
+                if current_status in ['ended', 'completed', 'failed']:
+                    print(f"📞 Call {current_status.upper()}")
+                    break
+                
+                time.sleep(3)  # Check every 3 seconds
+                
+            except Exception as e:
+                print(f"⚠️ Error monitoring call: {e}")
+                time.sleep(5)
+        
+        # Get final call details to extract complete transcript
+        final_call_details = self.get_call_details(call_id)
+        final_transcript = ""
+        
+        if final_call_details and not final_call_details.get('error'):
+            # Try to get transcript from final call details - check multiple possible locations
+            final_transcript = (
+                final_call_details.get('transcript', '') or 
+                final_call_details.get('transcription', '') or
+                final_call_details.get('artifact', {}).get('transcript', '') or
+                final_call_details.get('artifact', {}).get('transcription', '')
+            )
+            
+            # If we have an artifact with transcript array, convert it to readable text
+            if not final_transcript and final_call_details.get('artifact', {}).get('transcript'):
+                transcript_array = final_call_details.get('artifact', {}).get('transcript', [])
+                if isinstance(transcript_array, list):
+                    readable_transcript = []
+                    for entry in transcript_array:
+                        if isinstance(entry, dict):
+                            role = entry.get('role', 'unknown')
+                            message = entry.get('message', '')
+                            if message:
+                                readable_transcript.append(f"{role.upper()}: {message}")
+                    final_transcript = '\n'.join(readable_transcript)
+            
+            if final_transcript:
+                print(f"\n📝 FINAL TRANSCRIPTION FROM API:")
+                print("=" * 50)
+                print(final_transcript)
+                print("=" * 50)
+            else:
+                # Fallback to monitoring transcript
+                final_transcript = full_transcript or "No transcription captured"
+                print(f"\n📝 FINAL TRANSCRIPTION FROM MONITORING:")
+                print("=" * 50)
+                print(final_transcript)
+                print("=" * 50)
+        else:
+            # Fallback to monitoring transcript
+            final_transcript = full_transcript or "No transcription captured"
+            print(f"\n📝 FINAL TRANSCRIPTION (FALLBACK):")
+            print("=" * 50)
+            print(final_transcript)
+            print("=" * 50)
+        
+        return {
+            'transcription': final_transcript,
+            'full_transcript': final_transcript,
+            'conversation_log': conversation_log,
+            'successful': current_status in ['ended', 'completed']
+        }
 
     def make_social_worker_call(self, social_worker_phone: str, patient_name: str, case_id: str) -> Dict[str, Any]:
         """Make a voice call to confirm social worker assignment"""
@@ -306,6 +433,55 @@ class VapiIntegration:
         except requests.exceptions.RequestException as e:
             print(f"Error making Vapi call: {e}")
             return {"error": str(e)}
+    
+    def get_call_details(self, call_id: str) -> Dict[str, Any]:
+        """Get call details and real-time transcription from Vapi"""
+        try:
+            print(f"🔍 Getting call details for: {call_id}")
+            
+            # Make request to Vapi API to get call details
+            response = requests.get(
+                f"{self.base_url}/call/{call_id}",
+                headers=self.headers
+            )
+            response.raise_for_status()
+            
+            call_data = response.json()
+            print(f"📊 Call data: {call_data}")
+            
+            # Extract transcription and status
+            transcription = call_data.get("transcript", "")
+            status = call_data.get("status", "unknown")
+            
+            return {
+                "call_id": call_id,
+                "status": status,
+                "transcription": transcription,
+                "duration": call_data.get("duration", 0),
+                "cost": call_data.get("cost", 0),
+                "created_at": call_data.get("createdAt", ""),
+                "ended_at": call_data.get("endedAt", ""),
+                "full_data": call_data
+            }
+            
+        except requests.exceptions.RequestException as e:
+            # Don't print error for 404s as calls might not exist yet
+            if "404" not in str(e):
+                print(f"❌ Error getting call details: {e}")
+            return {
+                "call_id": call_id,
+                "error": str(e),
+                "status": "error"
+            }
+        except Exception as e:
+            # Handle JSON parsing errors silently
+            if "Expecting value" not in str(e):
+                print(f"❌ Error parsing call details: {e}")
+            return {
+                "call_id": call_id,
+                "error": str(e),
+                "status": "error"
+            }
 
 # Example usage in FastAPI webhook handler
 def handle_vapi_webhook(webhook_data: Dict[str, Any]):

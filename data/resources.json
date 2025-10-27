@@ -1,0 +1,35 @@
+[
+  {
+    "id": "resource-001",
+    "name": "San Francisco Food Bank",
+    "type": "food_bank",
+    "address": "900 Pennsylvania Avenue, San Francisco, CA 94107",
+    "phone": "(415) 282-1900",
+    "services": ["food_distribution", "nutrition_education", "community_gardens"],
+    "latitude": 37.7749,
+    "longitude": -122.4194,
+    "created_at": "2024-01-15T10:30:00"
+  },
+  {
+    "id": "resource-002",
+    "name": "Community Health Clinic",
+    "type": "medical_clinic",
+    "address": "234 Health Street, Oakland, CA 94601",
+    "phone": "(510) 555-4000",
+    "services": ["primary_care", "mental_health", "dental_care", "pharmacy"],
+    "latitude": 37.8044,
+    "longitude": -122.2712,
+    "created_at": "2024-01-15T10:30:00"
+  },
+  {
+    "id": "resource-003",
+    "name": "Job Training Center",
+    "type": "employment_services",
+    "address": "567 Career Lane, Berkeley, CA 94701",
+    "phone": "(510) 555-5000",
+    "services": ["job_training", "resume_help", "interview_prep", "placement_assistance"],
+    "latitude": 37.8715,
+    "longitude": -122.2730,
+    "created_at": "2024-01-15T10:30:00"
+  }
+]

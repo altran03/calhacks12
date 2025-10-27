@@ -1,0 +1,29 @@
+[
+  {
+    "id": "benefits-001",
+    "name": "CalFresh (SNAP)",
+    "type": "food_assistance",
+    "eligibility": "Low income households",
+    "application_url": "https://www.cdss.ca.gov/calFresh",
+    "phone": "(800) 952-5253",
+    "created_at": "2024-01-15T10:30:00"
+  },
+  {
+    "id": "benefits-002",
+    "name": "Medi-Cal",
+    "type": "health_insurance",
+    "eligibility": "Low income individuals and families",
+    "application_url": "https://www.coveredca.com/",
+    "phone": "(800) 300-1506",
+    "created_at": "2024-01-15T10:30:00"
+  },
+  {
+    "id": "benefits-003",
+    "name": "General Assistance",
+    "type": "cash_assistance",
+    "eligibility": "Adults without dependent children",
+    "application_url": "https://www.cdss.ca.gov/General-Assistance",
+    "phone": "(800) 952-5253",
+    "created_at": "2024-01-15T10:30:00"
+  }
+]

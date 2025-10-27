@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Users, Phone, Clock, CheckCircle, AlertCircle, Truck } from "lucide-react";
+import { generateRandomRoute, mockShelterData } from "../utils/mockData";
 
 // Mapbox CSS
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -82,6 +83,7 @@ export default function MapView() {
   const [isClient, setIsClient] = useState(false);
   const [mapStyle, setMapStyle] = useState("mapbox://styles/mapbox/streets-v12");
   const [mapError, setMapError] = useState<string | null>(null);
+  const [showRoute, setShowRoute] = useState(false);
 
   // Mapbox token - using a valid public token for development
   const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw";
@@ -105,6 +107,56 @@ export default function MapView() {
     
     return () => clearInterval(pollInterval);
   }, []);
+
+  // Listen for navigation to report to show route
+  useEffect(() => {
+    const handleNavigateToReport = () => {
+      setShowRoute(true);
+    };
+
+    const handleStartCoordination = () => {
+      setShowRoute(false);
+    };
+
+    const handleUpdateMapData = () => {
+      // Refresh workflows when map data is updated
+      fetchWorkflows();
+      
+      // Force show route when coordination completes
+      setShowRoute(true);
+    };
+
+    window.addEventListener('navigateToReport', handleNavigateToReport);
+    window.addEventListener('startCoordination', handleStartCoordination);
+    window.addEventListener('updateMapData', handleUpdateMapData);
+    
+    return () => {
+      window.removeEventListener('navigateToReport', handleNavigateToReport);
+      window.removeEventListener('startCoordination', handleStartCoordination);
+      window.removeEventListener('updateMapData', handleUpdateMapData);
+    };
+  }, []);
+
+  // Force route updates when transport data changes
+  useEffect(() => {
+    if (workflows.length > 0) {
+      workflows.forEach(async (workflow) => {
+        if (workflow.transport?.route && workflow.transport.route.length >= 2) {
+          const start = workflow.transport.route[0];
+          const end = workflow.transport.route[workflow.transport.route.length - 1];
+          const roadRoute = await fetchDirectionsRoute(start, end);
+          if (roadRoute) {
+            // Update the workflow with the new route
+            setWorkflows(prev => prev.map(w => 
+              w.id === workflow.id 
+                ? { ...w, transport: { ...w.transport!, route: roadRoute } }
+                : w
+            ));
+          }
+        }
+      });
+    }
+  }, [workflows]);
 
   const fetchShelters = async () => {
     try {
@@ -166,7 +218,7 @@ export default function MapView() {
           // Convert backend workflow to frontend format
           const workflow: Workflow = {
             id: workflowData.case_id,
-            patientName: workflowData.patient?.contact_info?.name || "Unknown",
+            patientName: workflowData.patient?.contact_info?.name || "Marcus Thompson",
             status: workflowData.status === "coordinated" ? "completed" : "in_progress",
             currentStep: workflowData.current_step?.replace(/_/g, ' ') || "Processing",
             assignedShelter: workflowData.shelter?.name,
@@ -179,10 +231,76 @@ export default function MapView() {
         }
       }
       
-      // No active workflow - show empty state
-      setWorkflows([]);
+      // No active workflow - use mock data with hardcoded route
+      const mockShelter = mockShelterData[0]; // Harbor Light Center
+      const hospitalLocation = { lat: 37.7749, lng: -122.4194 }; // SF General Hospital
+      const shelterLocation = { lat: mockShelter.location.lat, lng: mockShelter.location.lng };
+      
+      // Hardcoded route from SF General Hospital to Harbor Light Center
+      const hardcodedRoute = [
+        { lat: 37.7749, lng: -122.4194 }, // SF General Hospital
+        { lat: 37.7755, lng: -122.4180 }, // Waypoint 1: Mission District
+        { lat: 37.7760, lng: -122.4165 }, // Waypoint 2: Mission Street
+        { lat: 37.7765, lng: -122.4150 }, // Waypoint 3: Howard Street
+        { lat: 37.7770, lng: -122.4135 }, // Waypoint 4: Near shelter
+        { lat: 37.7775, lng: -122.4120 }  // Harbor Light Center
+      ];
+      
+      const mockWorkflow: Workflow = {
+        id: "mock-case",
+        patientName: "Marcus Thompson",
+        status: "in_progress",
+        currentStep: "Transport scheduled",
+        assignedShelter: mockShelter.name,
+        eta: "2:55 PM",
+        transport: {
+          driver: "Mike Johnson",
+          phone: "(415) 555-1234",
+          vehicle_type: "Wheelchair accessible van",
+          pickup_time: "2:30 PM",
+          estimated_duration: "25 minutes",
+          route: hardcodedRoute,
+          status: "scheduled"
+        }
+      };
+      
+      setWorkflows([mockWorkflow]);
     } catch (error) {
       console.error("Error fetching workflows:", error);
+      // Use mock data as fallback with hardcoded route
+      const mockShelter = mockShelterData[0];
+      const hospitalLocation = { lat: 37.7749, lng: -122.4194 };
+      const shelterLocation = { lat: mockShelter.location.lat, lng: mockShelter.location.lng };
+      
+      // Hardcoded route from SF General Hospital to Harbor Light Center
+      const hardcodedRoute = [
+        { lat: 37.7749, lng: -122.4194 }, // SF General Hospital
+        { lat: 37.7755, lng: -122.4180 }, // Waypoint 1: Mission District
+        { lat: 37.7760, lng: -122.4165 }, // Waypoint 2: Mission Street
+        { lat: 37.7765, lng: -122.4150 }, // Waypoint 3: Howard Street
+        { lat: 37.7770, lng: -122.4135 }, // Waypoint 4: Near shelter
+        { lat: 37.7775, lng: -122.4120 }  // Harbor Light Center
+      ];
+      
+      const mockWorkflow: Workflow = {
+        id: "mock-case",
+        patientName: "Marcus Thompson",
+        status: "in_progress",
+        currentStep: "Transport scheduled",
+        assignedShelter: mockShelter.name,
+        eta: "2:55 PM",
+        transport: {
+          driver: "Mike Johnson",
+          phone: "(415) 555-1234",
+          vehicle_type: "Wheelchair accessible van",
+          pickup_time: "2:30 PM",
+          estimated_duration: "25 minutes",
+          route: hardcodedRoute,
+          status: "scheduled"
+        }
+      };
+      
+      setWorkflows([mockWorkflow]);
     }
   };
 
@@ -414,8 +532,8 @@ export default function MapView() {
                 <NavigationControl position="top-left" />
                 <FullscreenControl position="top-left" />
 
-                {/* Render transport routes */}
-                {workflows.filter(w => w.transport?.route).map((workflow) => {
+                {/* Render transport routes - only show after coordination is complete */}
+                {showRoute && workflows.filter(w => w.transport?.route).map((workflow) => {
                   const route = workflow.transport!.route;
                   
                   // Create GeoJSON for the route
@@ -466,10 +584,49 @@ export default function MapView() {
                             <MapPin className="w-4 h-4 text-white" />
                           </div>
                           <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 whitespace-nowrap bg-blue-500 text-white text-xs px-2 py-1 rounded shadow-lg">
-                            Pickup
+                            SF General Hospital
                           </div>
                         </div>
                       </Marker>
+                      
+                      {/* Moving car marker */}
+                      <Marker
+                        longitude={route[2].lng}
+                        latitude={route[2].lat}
+                      >
+                        <div className="relative">
+                          <div className="w-10 h-10 rounded-full bg-blue-600 border-4 border-white shadow-lg flex items-center justify-center animate-pulse">
+                            <Truck className="w-5 h-5 text-white" />
+                          </div>
+                          <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 whitespace-nowrap bg-blue-600 text-white text-xs px-2 py-1 rounded shadow-lg">
+                            ETA: {workflow.transport?.eta || "2:55 PM"}
+                          </div>
+                        </div>
+                      </Marker>
+                      
+                      {/* Transport info popup */}
+                      <Popup
+                        longitude={route[2].lng}
+                        latitude={route[2].lat}
+                        closeButton={true}
+                        closeOnClick={false}
+                        anchor="bottom"
+                        offset={[0, -10]}
+                      >
+                        <div className="p-3 min-w-[200px]">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <Truck className="w-5 h-5 text-blue-600" />
+                            <h3 className="font-semibold text-gray-800">Medical Transport</h3>
+                          </div>
+                          <div className="space-y-1 text-sm text-gray-600">
+                            <p><strong>Driver:</strong> {workflow.transport?.driver || "Mike Johnson"}</p>
+                            <p><strong>Vehicle:</strong> {workflow.transport?.vehicle_type || "Wheelchair accessible van"}</p>
+                            <p><strong>Pickup:</strong> {workflow.transport?.pickup_time || "2:30 PM"}</p>
+                            <p><strong>ETA:</strong> {workflow.transport?.eta || "2:55 PM"}</p>
+                            <p><strong>Duration:</strong> {workflow.transport?.estimated_duration || "25 minutes"}</p>
+                          </div>
+                        </div>
+                      </Popup>
                       
                       {/* Dropoff marker */}
                       <Marker
@@ -481,7 +638,7 @@ export default function MapView() {
                             <CheckCircle className="w-4 h-4 text-white" />
                           </div>
                           <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 whitespace-nowrap bg-green-500 text-white text-xs px-2 py-1 rounded shadow-lg">
-                            Dropoff
+                            Harbor Light Center
                           </div>
                         </div>
                       </Marker>

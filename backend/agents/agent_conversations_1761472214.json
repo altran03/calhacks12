@@ -1,0 +1,191 @@
+{
+  "total_conversations": 6,
+  "start_time": "2025-10-26T02:49:59.948801",
+  "end_time": "2025-10-26T02:50:14.977749",
+  "conversations": [
+    {
+      "conversation_id": "CONV_1761472202",
+      "timestamp": "2025-10-26T02:50:02.961798",
+      "from_agent": "coordinator_agent",
+      "to_agent": "shelter_agent",
+      "message_type": "ShelterMatch",
+      "content": {
+        "case_id": "CASE_123",
+        "shelter_name": "Harbor Light Center",
+        "address": "1275 Howard St, San Francisco, CA 94103",
+        "available_beds": 12,
+        "accessibility": true,
+        "services": [
+          "medical_respite",
+          "wheelchair_access",
+          "case_management"
+        ],
+        "phone": "(415) 555-0000",
+        "patient_context": null
+      },
+      "status": "confirmed",
+      "response": {
+        "status": "available",
+        "beds_confirmed": 12,
+        "accessibility_confirmed": true,
+        "services_available": [
+          "medical_respite",
+          "wheelchair_access",
+          "case_management"
+        ],
+        "contact_person": "Sarah Johnson",
+        "phone": "(415) 555-0000"
+      },
+      "response_time": "2025-10-26T02:50:04.964149"
+    },
+    {
+      "conversation_id": "CONV_1761472204",
+      "timestamp": "2025-10-26T02:50:04.964461",
+      "from_agent": "shelter_agent",
+      "to_agent": "transport_agent",
+      "message_type": "TransportRequest",
+      "content": {
+        "case_id": "CASE_123",
+        "pickup_location": "1001 Potrero Ave, San Francisco, CA 94110",
+        "dropoff_location": "1275 Howard St, San Francisco, CA 94103",
+        "accessibility_required": true,
+        "urgency": "standard",
+        "patient_name": "John Doe",
+        "estimated_time": null
+      },
+      "status": "scheduled",
+      "response": {
+        "status": "scheduled",
+        "driver": "Mike Johnson",
+        "driver_phone": "(415) 555-1234",
+        "vehicle_type": "Wheelchair accessible van",
+        "pickup_time": "2025-01-26T14:30:00",
+        "estimated_duration": "25 minutes"
+      },
+      "response_time": "2025-10-26T02:50:06.965654"
+    },
+    {
+      "conversation_id": "CONV_1761472206",
+      "timestamp": "2025-10-26T02:50:06.965863",
+      "from_agent": "transport_agent",
+      "to_agent": "resource_agent",
+      "message_type": "ResourceRequest",
+      "content": {
+        "case_id": "CASE_123",
+        "patient_name": "John Doe",
+        "dietary_restrictions": "None",
+        "allergies": "None known",
+        "needed_items": [
+          "hygiene_kit",
+          "clothing",
+          "food_supplies"
+        ],
+        "location": "1275 Howard St, San Francisco, CA 94103",
+        "urgency": "standard"
+      },
+      "status": "prepared",
+      "response": {
+        "status": "prepared",
+        "items": [
+          "hygiene_kit",
+          "clothing",
+          "food_supplies"
+        ],
+        "delivery_address": "1275 Howard St, San Francisco, CA 94103",
+        "delivery_time": "2025-01-26T15:00:00",
+        "contact": "Resource Coordinator"
+      },
+      "response_time": "2025-10-26T02:50:08.967145"
+    },
+    {
+      "conversation_id": "CONV_1761472208",
+      "timestamp": "2025-10-26T02:50:08.967928",
+      "from_agent": "resource_agent",
+      "to_agent": "pharmacy_agent",
+      "message_type": "PharmacyRequest",
+      "content": {
+        "case_id": "CASE_123",
+        "patient_name": "John Doe",
+        "medications": [
+          {
+            "name": "Methadone",
+            "dosage": "50mg",
+            "frequency": "daily"
+          }
+        ],
+        "insurance_info": "Medi-Cal",
+        "location": "1275 Howard St, San Francisco, CA 94103",
+        "urgency": "standard"
+      },
+      "status": "ready",
+      "response": {
+        "status": "ready",
+        "medications": [
+          {
+            "name": "Methadone",
+            "dosage": "50mg",
+            "frequency": "daily"
+          }
+        ],
+        "pickup_location": "CVS Pharmacy, 123 Main St",
+        "pickup_time": "2025-01-26T16:00:00",
+        "insurance_verified": true
+      },
+      "response_time": "2025-10-26T02:50:10.969315"
+    },
+    {
+      "conversation_id": "CONV_1761472210",
+      "timestamp": "2025-10-26T02:50:10.969737",
+      "from_agent": "pharmacy_agent",
+      "to_agent": "eligibility_agent",
+      "message_type": "EligibilityRequest",
+      "content": {
+        "case_id": "CASE_123",
+        "patient_name": "John Doe",
+        "dob": "1980-01-01",
+        "ssn_last4": null,
+        "income_level": null,
+        "current_benefits": [
+          "Medi-Cal"
+        ],
+        "location": "San Francisco, CA"
+      },
+      "status": "verified",
+      "response": {
+        "status": "verified",
+        "benefits": [
+          "Medi-Cal",
+          "SNAP"
+        ],
+        "eligibility_confirmed": true,
+        "case_worker": "Jane Smith",
+        "phone": "(415) 555-5678"
+      },
+      "response_time": "2025-10-26T02:50:12.971793"
+    },
+    {
+      "conversation_id": "CONV_1761472212",
+      "timestamp": "2025-10-26T02:50:12.973573",
+      "from_agent": "eligibility_agent",
+      "to_agent": "social_worker_agent",
+      "message_type": "SocialWorkerAssignment",
+      "content": {
+        "case_id": "CASE_123",
+        "social_worker_name": "Sarah Johnson",
+        "contact_phone": "(415) 555-5678",
+        "department": "Homeless Services",
+        "specialization": "Homeless Services"
+      },
+      "status": "assigned",
+      "response": {
+        "status": "assigned",
+        "social_worker": "Sarah Johnson",
+        "contact": "(415) 555-5678",
+        "department": "Homeless Services",
+        "follow_up_scheduled": "2025-01-28T10:00:00",
+        "discharge_plan": "Comprehensive care plan created"
+      },
+      "response_time": "2025-10-26T02:50:14.976741"
+    }
+  ]
+}

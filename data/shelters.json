@@ -1,0 +1,41 @@
+[
+  {
+    "id": "shelter-001",
+    "name": "Hope Haven Shelter",
+    "address": "123 Main Street, San Francisco, CA 94102",
+    "capacity": 50,
+    "available_beds": 12,
+    "accessibility": true,
+    "phone": "(415) 555-0101",
+    "services": ["emergency_shelter", "meals", "case_management", "medical_referrals"],
+    "latitude": 37.7749,
+    "longitude": -122.4194,
+    "created_at": "2024-01-15T10:30:00"
+  },
+  {
+    "id": "shelter-002", 
+    "name": "Safe Harbor Emergency Shelter",
+    "address": "456 Oak Avenue, Oakland, CA 94601",
+    "capacity": 30,
+    "available_beds": 8,
+    "accessibility": true,
+    "phone": "(510) 555-0202",
+    "services": ["emergency_shelter", "meals", "shower_facilities", "laundry"],
+    "latitude": 37.8044,
+    "longitude": -122.2712,
+    "created_at": "2024-01-15T10:30:00"
+  },
+  {
+    "id": "shelter-003",
+    "name": "Community Care Center",
+    "address": "789 Pine Street, Berkeley, CA 94701", 
+    "capacity": 25,
+    "available_beds": 5,
+    "accessibility": false,
+    "phone": "(510) 555-0303",
+    "services": ["emergency_shelter", "meals", "counseling", "job_assistance"],
+    "latitude": 37.8715,
+    "longitude": -122.2730,
+    "created_at": "2024-01-15T10:30:00"
+  }
+]

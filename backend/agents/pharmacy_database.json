@@ -1,0 +1,128 @@
+{
+  "pharmacy_database": {
+    "medications": [
+      {
+        "name": "Methadone",
+        "dosage": "50mg",
+        "frequency": "daily",
+        "availability": "in_stock",
+        "pharmacy_location": "CVS Pharmacy, 123 Main St, San Francisco, CA",
+        "cost": "$45.00",
+        "insurance_coverage": "Medi-Cal",
+        "prescription_required": true
+      },
+      {
+        "name": "Lisinopril",
+        "dosage": "10mg",
+        "frequency": "daily",
+        "availability": "in_stock",
+        "pharmacy_location": "Walgreens, 456 Market St, San Francisco, CA",
+        "cost": "$12.50",
+        "insurance_coverage": "Medi-Cal",
+        "prescription_required": true
+      },
+      {
+        "name": "Metformin",
+        "dosage": "500mg",
+        "frequency": "twice_daily",
+        "availability": "in_stock",
+        "pharmacy_location": "Rite Aid, 789 Castro St, San Francisco, CA",
+        "cost": "$8.75",
+        "insurance_coverage": "Medi-Cal",
+        "prescription_required": true
+      },
+      {
+        "name": "Albuterol Inhaler",
+        "dosage": "90mcg",
+        "frequency": "as_needed",
+        "availability": "in_stock",
+        "pharmacy_location": "CVS Pharmacy, 123 Main St, San Francisco, CA",
+        "cost": "$35.00",
+        "insurance_coverage": "Medi-Cal",
+        "prescription_required": true
+      },
+      {
+        "name": "Ibuprofen",
+        "dosage": "200mg",
+        "frequency": "as_needed",
+        "availability": "in_stock",
+        "pharmacy_location": "Walgreens, 456 Market St, San Francisco, CA",
+        "cost": "$5.99",
+        "insurance_coverage": "Over-the-counter",
+        "prescription_required": false
+      }
+    ],
+    "supplies": [
+      {
+        "name": "Diabetic Test Strips",
+        "type": "medical_supply",
+        "availability": "in_stock",
+        "pharmacy_location": "CVS Pharmacy, 123 Main St, San Francisco, CA",
+        "cost": "$25.00",
+        "insurance_coverage": "Medi-Cal"
+      },
+      {
+        "name": "Blood Pressure Monitor",
+        "type": "medical_supply",
+        "availability": "in_stock",
+        "pharmacy_location": "Walgreens, 456 Market St, San Francisco, CA",
+        "cost": "$45.00",
+        "insurance_coverage": "Medi-Cal"
+      },
+      {
+        "name": "First Aid Kit",
+        "type": "medical_supply",
+        "availability": "in_stock",
+        "pharmacy_location": "Rite Aid, 789 Castro St, San Francisco, CA",
+        "cost": "$15.99",
+        "insurance_coverage": "Over-the-counter"
+      }
+    ],
+    "pharmacies": [
+      {
+        "name": "CVS Pharmacy",
+        "address": "123 Main St, San Francisco, CA 94102",
+        "phone": "(415) 555-0101",
+        "hours": "24/7",
+        "services": ["prescription_filling", "consultation", "delivery"],
+        "insurance_accepted": ["Medi-Cal", "Medicare", "Private"]
+      },
+      {
+        "name": "Walgreens",
+        "address": "456 Market St, San Francisco, CA 94103",
+        "phone": "(415) 555-0102",
+        "hours": "6:00 AM - 10:00 PM",
+        "services": ["prescription_filling", "consultation", "immunizations"],
+        "insurance_accepted": ["Medi-Cal", "Medicare", "Private"]
+      },
+      {
+        "name": "Rite Aid",
+        "address": "789 Castro St, San Francisco, CA 94114",
+        "phone": "(415) 555-0103",
+        "hours": "8:00 AM - 9:00 PM",
+        "services": ["prescription_filling", "consultation"],
+        "insurance_accepted": ["Medi-Cal", "Medicare", "Private"]
+      }
+    ],
+    "insurance_programs": [
+      {
+        "name": "Medi-Cal",
+        "coverage": "Full prescription coverage for low-income individuals",
+        "eligibility": "Income-based",
+        "application_process": "Online or in-person at county office"
+      },
+      {
+        "name": "Medicare Part D",
+        "coverage": "Prescription drug coverage for seniors",
+        "eligibility": "Age 65+ or disability",
+        "application_process": "Online or phone enrollment"
+      },
+      {
+        "name": "San Francisco Health Plan",
+        "coverage": "Local health coverage for San Francisco residents",
+        "eligibility": "San Francisco residency",
+        "application_process": "Online or phone enrollment"
+      }
+    ]
+  }
+}
